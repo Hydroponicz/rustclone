@@ -449,6 +449,9 @@ class Game {
     }
     if (hit && hit.box && hit.box.owner) {
       const own = hit.box.owner;
+      if (own.kind === 'node' && own.type === 'woodpile') {
+        return { label: `Take wood pile (${own.amount} wood)`, act: () => { this.combat._give('wood', own.amount); this.world.depleteNode(own, this.clock); } };
+      }
       if (own.kind === 'node' && own.type === 'hemp') {
         return { label: 'Pick Hemp', act: () => { this.combat._give('cloth', 10); this.world.depleteNode(own, this.clock); } };
       }

@@ -6,7 +6,7 @@ import { scaledCost, costText, TIERS, PIECES } from './building.js';
 
 const DEG = Math.PI / 180;
 const FISTS = { dmg: 6, range: 1.8, rate: 0.55, stamina: 4 };
-const FISTS_GATHER = { tree: 1, stone: 1, barrel: 1 };
+const FISTS_GATHER = { tree: 3, stone: 1, barrel: 1 };
 
 // Handles whatever is in the active hotbar slot: guns, melee tools, building plan, hammer, consumables, deployables.
 export class Combat {
@@ -294,7 +294,7 @@ export class Combat {
       }
       if (wh) {
         const p = new THREE.Vector3(wh.x, wh.y, wh.z);
-        this._burst(p, wh.box && (wh.box.kind === 'node' && wh.box.owner.type === 'tree') ? 'wood' : 'dust', 5);
+        this._burst(p, wh.box && wh.box.kind === 'node' && (wh.box.owner.type === 'tree' || wh.box.owner.type === 'woodpile') ? 'wood' : 'dust', 5);
         game.audio.play('impact', p.distanceTo(game.camera.position));
         if (wh.box && wh.box.kind === 'build') game.building.damagePiece(wh.box.owner, b.dmg * 0.15);
         if (wh.box && wh.box.kind === 'node' && wh.box.owner.type === 'barrel') this._hitBarrel(wh.box.owner, b.dmg * 0.5);
@@ -379,16 +379,19 @@ export class Combat {
         return;
       }
       const def = NODE_DEFS[node.type];
-      const per = node.type === 'tree' ? gather.tree : gather.stone;
+      // Wood piles are already cut, so they come apart twice as fast as a standing tree.
+      const per = node.type === 'tree' ? gather.tree : node.type === 'woodpile' ? gather.tree * 2 : gather.stone;
       const n = Math.min(per, node.amount);
       node.amount -= n;
       this._give(def.yield, n);
       if (def.bonus) this._give(def.bonus, Math.ceil(n / 2));
-      this._burst(p, node.type === 'tree' ? 'wood' : 'dust', 5);
-      game.audio.play(node.type === 'tree' ? 'chop' : 'mine');
+      const woody = node.type === 'tree' || node.type === 'woodpile';
+      this._burst(p, woody ? 'wood' : 'dust', 5);
+      game.audio.play(woody ? 'chop' : 'mine');
       game.makeNoise(game.player.pos.x, game.player.pos.z, 14);
       if (node.amount <= 0) {
         game.world.depleteNode(node, game.clock);
+        if (def.fellBonus) this._give(def.yield, Math.round(node.maxAmount * def.fellBonus));
         if (node.type === 'tree') game.audio.play('break');
       }
       return;

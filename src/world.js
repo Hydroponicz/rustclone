@@ -196,6 +196,7 @@ export function initMaterials() {
   MATS.sulfur = new THREE.MeshLambertMaterial({ color: 0xb5a65a, flatShading: true });
   MATS.barrel = new THREE.MeshLambertMaterial({ color: 0x3f5d7a });
   MATS.hemp = new THREE.MeshLambertMaterial({ color: 0x6fae3e });
+  MATS.logs = new THREE.MeshLambertMaterial({ color: 0x7a5232 });
   MATS.siding = [0x8a9aa5, 0xa58f74, 0x9aa58a, 0xb0a99a, 0x7d6b5c].map(
     (c) => new THREE.MeshLambertMaterial({ map: plankTex('#' + c.toString(16).padStart(6, '0'), 'rgba(0,0,0,0.25)') })
   );
@@ -229,8 +230,10 @@ export function initMaterials() {
 }
 
 // ---------------------------------------------------------------- resource nodes
+// amount: resources held; perScale: amount scales with the node's size; fellBonus: extra share on the last hit.
 const NODE_DEFS = {
-  tree: { yield: 'wood', amount: 140, respawn: 300 },
+  tree: { yield: 'wood', amount: 300, perScale: true, fellBonus: 0.15, respawn: 300 },
+  woodpile: { yield: 'wood', amount: 200, respawn: 480 },
   stone: { yield: 'stone', amount: 160, respawn: 360 },
   ore: { yield: 'metal_ore', amount: 120, bonus: 'stone', respawn: 420 },
   sulfur: { yield: 'sulfur_ore', amount: 110, bonus: 'stone', respawn: 420 },
@@ -560,7 +563,13 @@ export class World {
     const rockGeo = new THREE.DodecahedronGeometry(1.1, 0);
     const barrelGeo = new THREE.CylinderGeometry(0.42, 0.42, 1.15, 12).translate(0, 0.575, 0);
     const hempGeo = new THREE.ConeGeometry(0.35, 1.3, 5).translate(0, 0.65, 0);
-    const counts = { tree: 900, stone: 140, ore: 110, sulfur: 80, barrel: 70, hemp: 120 };
+    // Wood pile: a 3-2-1 stack of logs lying along X
+    const logs = [];
+    for (const [ly, lz] of [[0.17, -0.36], [0.17, 0], [0.17, 0.36], [0.46, -0.18], [0.46, 0.18], [0.75, 0]]) {
+      logs.push(new THREE.CylinderGeometry(0.17, 0.17, 1.5, 8).rotateZ(Math.PI / 2).translate(0, ly, lz));
+    }
+    const pileGeo = mergeGeometries(logs);
+    const counts = { tree: 900, stone: 140, ore: 110, sulfur: 80, barrel: 70, hemp: 120, woodpile: 60 };
     this.sets = {
       trunk: new NodeSet(this.scene, trunkGeo, MATS.trunk, counts.tree),
       leaf: new NodeSet(this.scene, leafGeo, MATS.pine, counts.tree),
@@ -569,6 +578,7 @@ export class World {
       sulfur: new NodeSet(this.scene, rockGeo, MATS.sulfur, counts.sulfur),
       barrel: new NodeSet(this.scene, barrelGeo, MATS.barrel, counts.barrel),
       hemp: new NodeSet(this.scene, hempGeo, MATS.hemp, counts.hemp, false),
+      woodpile: new NodeSet(this.scene, pileGeo, MATS.logs, counts.woodpile),
     };
     const inZone = (x, z, pad) => this.terrain.zones.some((zn) => Math.hypot(x - zn.x, z - zn.z) < zn.r + pad);
 
@@ -613,6 +623,28 @@ export class World {
       this._addNode('barrel', x, h, z, rng);
       b++;
     }
+    // Wood piles (placed last so every other node keeps its seeded position): forest edges,
+    // the outskirts of town and the checkpoint.
+    let w = 0, tries = 0;
+    while (w < counts.woodpile && tries++ < 6000) {
+      let x, z;
+      if (w < 40) {
+        x = randRange(rng, -HALF * 0.85, HALF * 0.85); z = randRange(rng, -HALF * 0.85, HALF * 0.85);
+        const forest = fbm(x * 0.01, z * 0.01, 3, 51);
+        if (forest < 0.36 || forest > 0.55 || inZone(x, z, 0)) continue;
+      } else if (w < 54) {
+        const t = this.terrain.town, a = rng() * Math.PI * 2, r = randRange(rng, 30, 64);
+        x = t.x + Math.cos(a) * r; z = t.z + Math.sin(a) * r;
+      } else {
+        const m = this.terrain.military;
+        x = m.x + randRange(rng, -13, 13); z = m.z + randRange(rng, -13, 13);
+      }
+      const h = T.heightAt(x, z);
+      if (h < 2 || T.slopeAt(x, z) > 0.35) continue;
+      if (this.physics.query(x - 1.4, z - 1.4, x + 1.4, z + 1.4).length) continue;
+      this._addNode('woodpile', x, h, z, rng);
+      w++;
+    }
   }
 
   _addNode(type, x, y, z, rng) {
@@ -628,6 +660,12 @@ export class World {
       node.scale = 1;
       node.index = this.sets.barrel.mesh.count++;
       node.box = makeBox(x - 0.42, y - 0.2, z - 0.42, x + 0.42, y + 1.15, z + 0.42, 'node', node);
+    } else if (type === 'woodpile') {
+      node.scale = 1;
+      node.rot = rng() < 0.5 ? 0 : Math.PI / 2; // quarter turns keep the box axis-aligned
+      node.index = this.sets.woodpile.mesh.count++;
+      const hx = node.rot ? 0.5 : 0.78, hz = node.rot ? 0.78 : 0.5;
+      node.box = makeBox(x - hx, y - 0.2, z - hz, x + hx, y + 0.92, z + hz, 'node', node);
     } else if (type === 'hemp') {
       node.scale = randRange(rng, 0.8, 1.2);
       node.index = this.sets.hemp.mesh.count++;
@@ -657,7 +695,8 @@ export class World {
     if (visible) {
       this.physics.add(node.box);
       const def = NODE_DEFS[node.type];
-      node.amount = def.amount || 0;
+      node.amount = Math.round((def.amount || 0) * (def.perScale ? node.scale : 1));
+      node.maxAmount = node.amount;
       node.hp = def.hp || 0;
     } else {
       this.physics.remove(node.box);

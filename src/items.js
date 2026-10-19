@@ -24,11 +24,11 @@ export const ITEMS = {
   water: { name: 'Water Bottle', icon: '💧', stack: 10, use: { water: 45, time: 2 } },
 
   // Tools & melee
-  rock: { name: 'Rock', icon: '🪨', stack: 1, melee: { dmg: 10, range: 2.2, rate: 0.85, stamina: 5 }, gather: { tree: 4, stone: 6, barrel: 1 } },
-  hatchet: { name: 'Stone Hatchet', icon: '🪓', stack: 1, melee: { dmg: 18, range: 2.4, rate: 0.75, stamina: 6 }, gather: { tree: 12, stone: 3, barrel: 1 } },
-  pickaxe: { name: 'Stone Pickaxe', icon: '⛏️', stack: 1, melee: { dmg: 16, range: 2.4, rate: 0.85, stamina: 7 }, gather: { tree: 3, stone: 13, barrel: 1 } },
-  machete: { name: 'Machete', icon: '🔪', stack: 1, melee: { dmg: 38, range: 2.5, rate: 0.7, stamina: 6 }, gather: { tree: 6, stone: 2, barrel: 2 } },
-  spear: { name: 'Wooden Spear', icon: '🔱', stack: 1, melee: { dmg: 30, range: 3.2, rate: 1.0, stamina: 8 }, gather: { tree: 2, stone: 1, barrel: 1 } },
+  rock: { name: 'Rock', icon: '🪨', stack: 1, melee: { dmg: 10, range: 2.2, rate: 0.85, stamina: 5 }, gather: { tree: 10, stone: 6, barrel: 1 } },
+  hatchet: { name: 'Stone Hatchet', icon: '🪓', stack: 1, melee: { dmg: 18, range: 2.4, rate: 0.75, stamina: 6 }, gather: { tree: 28, stone: 3, barrel: 1 } },
+  pickaxe: { name: 'Stone Pickaxe', icon: '⛏️', stack: 1, melee: { dmg: 16, range: 2.4, rate: 0.85, stamina: 7 }, gather: { tree: 8, stone: 13, barrel: 1 } },
+  machete: { name: 'Machete', icon: '🔪', stack: 1, melee: { dmg: 38, range: 2.5, rate: 0.7, stamina: 6 }, gather: { tree: 14, stone: 2, barrel: 2 } },
+  spear: { name: 'Wooden Spear', icon: '🔱', stack: 1, melee: { dmg: 30, range: 3.2, rate: 1.0, stamina: 8 }, gather: { tree: 5, stone: 1, barrel: 1 } },
   hammer: { name: 'Hammer', icon: '🔨', stack: 1, tool: 'hammer' },
   building_plan: { name: 'Building Plan', icon: '📐', stack: 1, tool: 'plan' },
   flashlight: { name: 'Flashlight', icon: '🔦', stack: 1 },

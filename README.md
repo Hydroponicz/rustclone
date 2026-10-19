@@ -58,7 +58,7 @@ In menus and the inventory, a cursor appears. The left stick moves it, the D-pad
 
 ## The loop
 
-1. Wake up on a beach with a rock. Hit trees for **wood** and rocks for **stone**, **metal ore** (brown) and **sulfur ore** (yellow). Pick **hemp** (E) for cloth.
+1. Wake up on a beach with a rock. Hit trees for **wood** and rocks for **stone**, **metal ore** (brown) and **sulfur ore** (yellow). Pick **hemp** (E) for cloth. Look for **wood piles** (stacked logs at forest edges, around town and at the checkpoint): press E to take the whole pile, about 200 wood, or chop it. Trees give about 10 wood per hit with a rock and 28 with a hatchet, bigger trees hold more, and you get a bonus when one falls.
 2. Craft a hatchet and pickaxe, then a **building plan**. Place foundations, walls, a doorway with a door, and floors. Upgrade with the **hammer**.
 3. Build a **furnace**, load it with wood and ore, and light it to get metal fragments, sulfur and charcoal. Turn those into gunpowder and ammo.
 4. Loot the **town** (kitchen cabinets, fridges, wardrobes, car wrecks) and the **military checkpoint** (weapon crates) for guns, ammo and medical supplies. Break **barrels** for scrap.
