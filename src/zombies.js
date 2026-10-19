@@ -275,12 +275,12 @@ export class ZombieManager {
     // Population management
     this.spawnT -= dt;
     const aliveCount = this.list.reduce((n, z) => n + (z.alive ? 1 : 0), 0);
-    if (this.spawnT <= 0) {
+    if (this.spawnT <= 0 && !game.cheats.noSpawn) {
       this.spawnT = 1.2;
       if (aliveCount < this.targetCount()) this.trySpawn(null, 2);
     }
     // Nightly horde
-    if (night && env.hours >= 22 && this.hordeDay !== env.day && player.alive) {
+    if (night && env.hours >= 22 && this.hordeDay !== env.day && player.alive && !game.cheats.noSpawn) {
       this.hordeDay = env.day;
       const a = Math.random() * Math.PI * 2;
       const c = { x: p.x + Math.cos(a) * 75, z: p.z + Math.sin(a) * 75 };
@@ -307,10 +307,14 @@ export class ZombieManager {
         continue;
       }
       if (dist > 135 && zb.state !== 'chase') { zb.dispose(); this.list.splice(i, 1); continue; }
+      if (game.cheats.freezeAI) { this._animate(zb, dt, 0); continue; }
 
       // --- perception
       zb.losT -= dt;
-      if (zb.losT <= 0 && player.alive) {
+      if (game.cheats.noTarget) {
+        zb.seesPlayer = false;
+        if (zb.state === 'chase') { zb.state = 'idle'; zb.stateT = 2; zb.windup = -1; }
+      } else if (zb.losT <= 0 && player.alive) {
         zb.losT = 0.25 + Math.random() * 0.15;
         let sees = false;
         if (dist < sight) {

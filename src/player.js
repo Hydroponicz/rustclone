@@ -68,6 +68,8 @@ export class Player {
       this.pitch = clamp(this.pitch, -1.55, 1.55);
     }
 
+    if (this.game.cheats.noclip) { this._fly(dt, input, locked); return; }
+
     // --- crouch (blocked by ceilings)
     const wantCrouch = locked && input.down('ControlLeft', 'KeyC');
     if (wantCrouch) this.crouching = true;
@@ -98,6 +100,7 @@ export class Player {
     if (this.swimming) speed = 2.0;
     if (this.health < 30) speed *= 0.85;
     if (this.game.combat.using) speed *= 0.5;
+    speed *= this.game.cheats.speed;
 
     const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
     const wx = (mx * cos + mz * sin) * speed;
@@ -181,7 +184,38 @@ export class Player {
     this.stamina = clamp(this.stamina, 0, 100);
   }
 
+  // Dev-console noclip: free flight through everything.
+  _fly(dt, input, locked) {
+    let f = 0, r = 0, u = 0;
+    if (locked) {
+      if (input.down('KeyW')) f += 1;
+      if (input.down('KeyS')) f -= 1;
+      if (input.down('KeyD')) r += 1;
+      if (input.down('KeyA')) r -= 1;
+      if (input.down('Space')) u += 1;
+      if (input.down('ControlLeft', 'KeyC')) u -= 1;
+      f -= input.moveY;
+      r += input.moveX;
+    }
+    const speed = 12 * (input.down('ShiftLeft') ? 4 : 1) * this.game.cheats.speed;
+    const cp = Math.cos(this.pitch), sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
+    const ox = this.pos.x, oy = this.pos.y, oz = this.pos.z;
+    this.pos.x += (-sy * cp * f + cy * r) * speed * dt;
+    this.pos.y += (Math.sin(this.pitch) * f + u) * speed * dt;
+    this.pos.z += (-cy * cp * f - sy * r) * speed * dt;
+    this.speedNow = Math.hypot(this.pos.x - ox, this.pos.y - oy, this.pos.z - oz) / Math.max(dt, 1e-4);
+    this.vx = this.vy = this.vz = 0;
+    this.onGround = false;
+    this.sprinting = false;
+    this.crouching = false;
+    this.eyeH = STAND.eye;
+  }
+
   updateStats(dt) {
+    if (this.game.cheats.god) {
+      this.food = this.water = this.stamina = 100;
+      return;
+    }
     const exert = this.sprinting ? 1.8 : 1;
     this.food = Math.max(0, this.food - dt * (100 / 2700) * exert);
     this.water = Math.max(0, this.water - dt * (100 / 2000) * exert);

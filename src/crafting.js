@@ -16,8 +16,9 @@ export class Crafting {
   enqueue(recipe, times = 1) {
     let n = 0;
     for (let i = 0; i < times; i++) {
-      if (!this.game.inventory.pay(recipe.cost)) break;
-      this.queue.push({ recipe, t: 0 });
+      const free = this.game.cheats.freeBuild;
+      if (!free && !this.game.inventory.pay(recipe.cost)) break;
+      this.queue.push({ recipe, t: 0, free });
       n++;
     }
     if (n === 0) this.game.ui.message('Not enough resources', 'warn');
@@ -29,13 +30,14 @@ export class Crafting {
     const job = this.queue[index];
     if (!job) return;
     this.queue.splice(index, 1);
+    if (job.free) return;
     for (const k in job.recipe.cost) this.game.inventory.add(k, job.recipe.cost[k]);
   }
 
   update(dt) {
     const job = this.queue[0];
     if (!job) return;
-    job.t += dt;
+    job.t += this.game.cheats.instaCraft ? job.recipe.time : dt;
     if (job.t >= job.recipe.time) {
       this.queue.shift();
       const r = job.recipe;

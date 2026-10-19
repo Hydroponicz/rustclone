@@ -305,14 +305,15 @@ export class LootSpot {
   onClose(game) {
     if (this.container.isEmpty()) this.respawnAt = game.clock + randRange(Math.random, 420, 720);
   }
+  refill() {
+    this.container.clear();
+    rollLoot(this.container, this.table);
+    this.respawnAt = 0;
+  }
   update(game) {
     if (this.respawnAt && game.clock > this.respawnAt && game.ui.openTarget !== this) {
       const p = this.pos;
-      if (!p || Math.hypot(p.x - game.player.pos.x, p.z - game.player.pos.z) > 40) {
-        this.container.clear();
-        rollLoot(this.container, this.table);
-        this.respawnAt = 0;
-      }
+      if (!p || Math.hypot(p.x - game.player.pos.x, p.z - game.player.pos.z) > 40) this.refill();
     }
   }
 }

@@ -221,7 +221,7 @@ export class Combat {
   _fire(item, gun) {
     const game = this.game;
     const player = game.player;
-    item.mag--;
+    if (!game.cheats.infiniteAmmo) item.mag--;
     this.fireCd = 60 / gun.rpm;
     if (gun.tube || gun.model === 'bolt') this.pumpT = 1;
 
@@ -275,6 +275,7 @@ export class Combat {
       b.vy -= 9.81 * dt;
       const sx = b.vx * dt, sy = b.vy * dt, sz = b.vz * dt;
       const len = Math.hypot(sx, sy, sz);
+      game.dev.debug.onBullet(b.x, b.y, b.z, b.x + sx, b.y + sy, b.z + sz);
       o.set(b.x, b.y, b.z);
       d.set(sx / len, sy / len, sz / len);
       const wh = phys.raycast(b.x, b.y, b.z, d.x, d.y, d.z, len, { filter: (bx) => bx.kind !== 'node' || bx.owner.type !== 'hemp' });

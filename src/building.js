@@ -552,7 +552,7 @@ export class BuildingManager {
       const door = this.addPiece(plan, 0);
       door.parent = plan.parent;
       plan.parent.door = door;
-      inv.remove('door_wood', 1);
+      if (!this.game.cheats.freeBuild) inv.remove('door_wood', 1);
       this.game.audio.play('build');
       return true;
     }
@@ -560,12 +560,12 @@ export class BuildingManager {
       const d = new Deployable(this, plan.type, plan.x, plan.y, plan.z, plan.rot);
       this.deployables.push(d);
       if (plan.type === 'bag') this.spawnBag = d;
-      inv.remove(d.def.item, 1);
+      if (!this.game.cheats.freeBuild) inv.remove(d.def.item, 1);
       this.game.audio.play('build');
       return true;
     }
     const cost = scaledCost(TIERS[0].cost, PIECES[plan.type].mult);
-    if (!inv.pay(cost)) {
+    if (!this.game.cheats.freeBuild && !inv.pay(cost)) {
       this.game.ui.message(`Need ${costText(cost)}`, 'warn');
       return false;
     }
@@ -580,7 +580,7 @@ export class BuildingManager {
     if (piece.tier >= TIERS.length - 1) return this.game.ui.message('Already at max tier.');
     const next = piece.tier + 1;
     const cost = scaledCost(TIERS[next].cost, PIECES[piece.type].mult);
-    if (!this.game.inventory.pay(cost)) return this.game.ui.message(`Upgrade to ${TIERS[next].name} needs ${costText(cost)}`, 'warn');
+    if (!this.game.cheats.freeBuild && !this.game.inventory.pay(cost)) return this.game.ui.message(`Upgrade to ${TIERS[next].name} needs ${costText(cost)}`, 'warn');
     piece.tier = next;
     piece.maxHp = TIERS[next].hp;
     piece.hp = piece.maxHp;
@@ -595,7 +595,7 @@ export class BuildingManager {
     const base = piece.type === 'door' ? { wood: 150 } : scaledCost(TIERS[piece.tier].cost, PIECES[piece.type].mult);
     const frac = Math.min(0.25, (piece.maxHp - piece.hp) / piece.maxHp);
     const cost = scaledCost(base, frac * 0.6);
-    if (!this.game.inventory.pay(cost)) return this.game.ui.message(`Repair needs ${costText(cost)}`, 'warn');
+    if (!this.game.cheats.freeBuild && !this.game.inventory.pay(cost)) return this.game.ui.message(`Repair needs ${costText(cost)}`, 'warn');
     piece.hp = Math.min(piece.maxHp, piece.hp + piece.maxHp * 0.25);
     this.game.audio.play('build');
   }

@@ -81,7 +81,22 @@ The game autosaves every 60 seconds to `localStorage`. Use **Continue** on the t
 | `src/inventory.js`, `src/crafting.js` | Containers and the crafting queue |
 | `src/ui.js`, `index.html`, `style.css` | HUD, moodles, inventory drag-and-drop, crafting UI, menus |
 | `src/audio.js` | WebAudio-synthesized sound effects |
+| `src/devconsole.js` | Dev console, cheats, stats overlay and debug visualisations |
 | `src/gamepad.js` | Controller polling, gameplay mapping, rumble, aim slowdown, and the menu/inventory cursor |
 | `vendor/three.module.min.js` | three.js r170 (MIT, see `vendor/THREE_LICENSE`) |
+
+## Dev console
+
+Press **`** (backquote) or **F8** to open the developer console, and **F3** to toggle the live stats overlay (FPS, frame/update/render time, draw calls, position and zone, survival stats, zombie counts by AI state, base pieces by tier, input device, and active cheats). Tab autocompletes commands, item ids and teleport targets. ↑/↓ scroll through command history (kept between sessions). Separate several commands with `;`. Errors and warnings are captured into the console, and a red badge appears when new ones arrive while it's closed.
+
+| Group | Commands |
+| --- | --- |
+| Player | `god`, `noclip`, `speed <x>`, `heal`, `cure`, `infect <0-1>`, `bleed`, `sethp <n>`, `setstat <food\|water\|stamina> <n>`, `kill`, `pos`, `tp <x z \| town \| military \| beach \| bag \| base>` |
+| Items | `give <item> [qty]`, `kit <starter\|builder\|guns\|smelt\|survival>`, `items [filter]`, `recipes`, `clearinv`, `ammo` (infinite), `freebuild`, `instacraft` |
+| World & time | `time <hour>`, `day <n>`, `timescale <x>`, `freezetime`, `respawnnodes`, `refillloot`, `save`, `load`, `wipesave` |
+| Zombies | `spawn [n] [dist]`, `horde [size]`, `killall [radius]`, `clearzombies`, `notarget`, `freezeai`, `nospawn`, `zombies [n]`, `noise <radius>` |
+| Debug views | `look` (inspect what's under the crosshair), `showcolliders`, `showhitboxes`, `showai`, `shownoise`, `showbullets`, `debugall`, `stats`, `info`, `js <expr>` |
+
+Toggles accept an optional `on`/`off`; without one they flip. Cheats aren't saved, so a reload resets them.
 
 Add `?debuglock` to the URL to let automated tests drive the game without pointer lock. The game object is exposed as `window.game` for console tinkering.

@@ -13,6 +13,7 @@ import { Crafting } from './crafting.js';
 import { UI } from './ui.js';
 import { Audio } from './audio.js';
 import { PadState, PadGameplay, PadCursor } from './gamepad.js';
+import { DevConsole } from './devconsole.js';
 
 const SAVE_KEY = 'rotrust_save_v1';
 const SETTINGS_KEY = 'rotrust_settings_v1';
@@ -122,6 +123,11 @@ class Game {
     this.settings = { sensitivity: 1, fov: 75, volume: 0.6, maxZombies: 60, padSens: 1, invertY: false, padEnabled: true };
     try { Object.assign(this.settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch { /* ignore */ }
     this.objectivesDone = new Set();
+    // Debug toggles driven by the dev console (` key).
+    this.cheats = {
+      god: false, noclip: false, speed: 1, infiniteAmmo: false, freeBuild: false, instaCraft: false,
+      timeScale: 1, freezeTime: false, noTarget: false, freezeAI: false, noSpawn: false,
+    };
 
     const canvas = document.getElementById('game');
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -130,6 +136,7 @@ class Game {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.autoClear = false;
+    this.renderer.info.autoReset = false; // count both scene passes per frame
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(this.settings.fov, window.innerWidth / window.innerHeight, 0.05, 700);
@@ -160,6 +167,7 @@ class Game {
     this.ui = new UI(this);
     this.padGameplay = new PadGameplay(this);
     this.padCursor = new PadCursor(this);
+    this.dev = new DevConsole(this);
     this.currentInteract = null;
     window.addEventListener('gamepadconnected', (e) => this.ui.message(`Controller detected: ${e.gamepad.id.split('(')[0].trim()} (turn off in Settings if this isn't a controller)`));
     window.addEventListener('gamepaddisconnected', () => {
@@ -218,7 +226,7 @@ class Game {
     inv.onchange = pen.onchange = apply;
     apply();
     document.getElementById('game').addEventListener('click', () => {
-      if (this.started && !this.ui.inventoryOpen && this.player.alive) this.lock();
+      if (this.started && !this.ui.inventoryOpen && this.player.alive && !this.dev.open) this.lock();
     });
   }
 
@@ -250,7 +258,7 @@ class Game {
 
   onLockChange() {
     const locked = !!document.pointerLockElement;
-    if (!locked && this.started && !this.ui.inventoryOpen && this.player.alive && !this.input.padActive) {
+    if (!locked && this.started && !this.ui.inventoryOpen && this.player.alive && !this.input.padActive && !this.dev.open) {
       this.running = false;
       this.ui.showMenu('pause');
     }
@@ -296,12 +304,13 @@ class Game {
 
   // ------------------------------------------------------------------ gameplay hooks
   makeNoise(x, z, radius) {
-    this.zombies.noise(x, z, radius);
+    this.dev.debug.onNoise(x, z, radius);
+    if (!this.cheats.noTarget) this.zombies.noise(x, z, radius);
   }
 
   damagePlayer(amount, source, silent = false) {
     const p = this.player;
-    if (!p.alive) return;
+    if (!p.alive || this.cheats.god) return;
     p.health -= amount;
     if (!silent) {
       this.ui.damageFlash(amount);
@@ -318,6 +327,7 @@ class Game {
     this.audio.play('zhit');
     this.combat.recoilPitch += (Math.random() - 0.3) * 0.08;
     this.combat.recoilYaw += (Math.random() - 0.5) * 0.12;
+    if (this.cheats.god) return;
     if (Math.random() < 0.3 && !p.bleeding) { p.bleeding = true; this.ui.message('You are bleeding! Use a bandage.', 'bad'); }
     // Project Zomboid-style: a scratch or bite can carry the infection.
     if (p.infection === 0 && Math.random() < 0.04) p.infection = 0.0001;
@@ -439,8 +449,11 @@ class Game {
     requestAnimationFrame((tt) => this.frame(tt));
     const dt = Math.min(0.05, (t - this.last) / 1000);
     this.last = t;
+    const t0 = performance.now();
     this.tick(dt);
+    const t1 = performance.now();
     this.render();
+    this.dev.frame(dt, t1 - t0, performance.now() - t1);
   }
 
   tick(dt) {
@@ -451,7 +464,7 @@ class Game {
     const uiRoot = this.padCursor.currentRoot();
     this.padCursor.update(dt);
     if (!uiRoot && this.running) this.padGameplay.apply(dt);
-    if (this.running) this.update(dt);
+    if (this.running) this.update(dt * this.cheats.timeScale);
     this.ui.endFrame();
     this.input.endFrame();
   }
@@ -477,7 +490,7 @@ class Game {
       p.update(dt, input, locked && !this.ui.inventoryOpen);
       p.updateStats(dt);
     }
-    this.env.update(dt, this._v.set(p.pos.x, p.pos.y, p.pos.z));
+    this.env.update(this.cheats.freezeTime ? 0 : dt, this._v.set(p.pos.x, p.pos.y, p.pos.z));
     this.updateCamera();
     this.combat.update(dt, input, locked && !this.ui.inventoryOpen);
     this.zombies.update(dt);
@@ -537,6 +550,7 @@ class Game {
     const dark = this.env.darkness;
     this.vmAmbient.intensity = 0.15 + (1 - dark) * 0.5 + (this.combat.flashlightOn ? 0.25 : 0);
     this.vmSun.intensity = 0.15 + (1 - dark) * 1.1;
+    r.info.reset();
     r.clear();
     r.render(this.scene, this.camera);
     if (this.started && this.player.alive) {
