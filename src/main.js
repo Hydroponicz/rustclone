@@ -225,6 +225,10 @@ class Game {
     [sens, fov, vol, zc, psens, inv, pen].forEach((e) => (e.oninput = apply));
     inv.onchange = pen.onchange = apply;
     apply();
+    // Any key (other than Esc) or click recaptures the mouse when it was left free.
+    window.addEventListener('keydown', (e) => {
+      if (e.code !== 'Escape' && e.code !== 'Backquote' && e.code !== 'F8' && this.needsRelock) this.lock();
+    });
     document.getElementById('game').addEventListener('click', () => {
       if (this.started && !this.ui.inventoryOpen && this.player.alive && !this.dev.open) this.lock();
     });
@@ -256,8 +260,17 @@ class Game {
     this.ui.showMenu('pause');
   }
 
+  // Running and alive, but the mouse isn't captured (e.g. right after closing a container).
+  get needsRelock() {
+    return this.started && this.running && this.player.alive && !this.ui.inventoryOpen && !document.pointerLockElement &&
+      !this.input.padActive && !this.debugLock && !this.dev.open;
+  }
+
   onLockChange() {
     const locked = !!document.pointerLockElement;
+    // Losing the lock just after closing a container (e.g. the browser handling that same Esc press)
+    // isn't a pause request.
+    if (!locked && performance.now() - this.ui.lastClosed < 1500) return;
     if (!locked && this.started && !this.ui.inventoryOpen && this.player.alive && !this.input.padActive && !this.dev.open) {
       this.running = false;
       this.ui.showMenu('pause');
@@ -476,11 +489,16 @@ class Game {
     const p = this.player;
 
     // Global keys
-    if (input.pressed('Tab') || input.pressed('KeyI')) {
-      if (this.ui.inventoryOpen) this.ui.closeInventory();
-      else if (p.alive) this.ui.openInventory();
+    if (this.ui.inventoryOpen && (input.pressed('Tab') || input.pressed('KeyI') || input.pressed('KeyE') || input.pressed('Escape'))) {
+      // Esc can't re-grab the mouse (browsers don't treat it as a user gesture), so don't try;
+      // the "click to resume" hint covers that case.
+      this.ui.closeInventory(!input.pressed('Escape'));
+      input.justPressed.delete('KeyE');
+      input.justPressed.delete('Tab');
+      input.justPressed.delete('KeyI');
+    } else if ((input.pressed('Tab') || input.pressed('KeyI')) && p.alive) {
+      this.ui.openInventory();
     }
-    if (this.ui.inventoryOpen && input.pressed('Escape')) this.ui.closeInventory();
     if (locked && p.alive) {
       for (let i = 0; i < 6; i++) if (input.pressed(`Digit${i + 1}`)) this.combat.selectSlot(i);
       if (input.wheel && !(this.combat.def && this.combat.def.gun && this.combat.adsAmount > 0.5)) this.combat.selectSlot((this.combat.slot + input.wheel + 6) % 6);
@@ -517,6 +535,7 @@ class Game {
       if (tp && Math.hypot(tp.x - p.pos.x, tp.z - p.pos.z) > 4) this.ui.closeInventory(false);
     }
 
+    document.getElementById('resume-hint').style.display = this.needsRelock ? 'block' : 'none';
     this._hudT = (this._hudT || 0) - dt;
     if (this._hudT <= 0) {
       this._hudT = 0.1;

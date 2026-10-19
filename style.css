@@ -233,3 +233,8 @@ body.pad .kbm-only { display: none; }
   position: fixed; left: 12px; top: 64px; z-index: 30; display: none; pointer-events: none;
   background: rgba(120, 20, 15, 0.85); color: #ffd8d0; padding: 3px 10px; font-size: 12px;
 }
+
+#resume-hint {
+  display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, 28px);
+  background: var(--bg); border: 1px solid var(--accent); padding: 6px 14px; font-size: 14px; color: var(--accent);
+}

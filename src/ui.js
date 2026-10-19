@@ -18,6 +18,7 @@ export class UI {
   constructor(game) {
     this.game = game;
     this.inventoryOpen = false;
+    this.lastClosed = -1e9;
     this.openTarget = null;
     this.openC = null;
     this.drag = null;
@@ -243,6 +244,7 @@ export class UI {
   closeInventory(relock = true) {
     if (!this.inventoryOpen) return;
     this.inventoryOpen = false;
+    this.lastClosed = performance.now();
     $('inventory').style.display = 'none';
     if (this.openC) this.openC.onChange = null;
     if (this.openTarget && this.openTarget.onClose) this.openTarget.onClose(this.game);
