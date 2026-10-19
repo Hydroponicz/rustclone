@@ -31,6 +31,7 @@ Then open http://localhost:8080. It works on any static host (GitHub Pages, Netl
 | T | Check magazine |
 | B | Toggle fire mode (auto weapons) |
 | F | Flashlight |
+| M | Map (mouse wheel to zoom, M or Esc to close) |
 | Hammer: LMB / RMB / X twice | Repair / upgrade / demolish |
 | Esc | Pause menu (save, settings) |
 
@@ -47,7 +48,8 @@ Any standard gamepad works (Xbox, PlayStation, Switch Pro and others the browser
 | RT / LT | Attack, use or place / aim down sights (upgrade with the hammer, cycle piece with the building plan) |
 | A / B | Jump / crouch toggle |
 | X | Interact. Hold it, or tap it when there's nothing to interact with, to reload |
-| Y or View | Inventory and crafting |
+| Y | Inventory and crafting |
+| View | Map (RB / LB zoom in / out) |
 | LB / RB | Previous / next belt slot |
 | D-pad ↑ ↓ ← → | Flashlight / check mag / demolish / reload or cycle building piece |
 | Menu | Pause |
@@ -60,7 +62,7 @@ In menus and the inventory, a cursor appears. The left stick moves it, the D-pad
 2. Craft a hatchet and pickaxe, then a **building plan**. Place foundations, walls, a doorway with a door, and floors. Upgrade with the **hammer**.
 3. Build a **furnace**, load it with wood and ore, and light it to get metal fragments, sulfur and charcoal. Turn those into gunpowder and ammo.
 4. Loot the **town** (kitchen cabinets, fridges, wardrobes, car wrecks) and the **military checkpoint** (weapon crates) for guns, ammo and medical supplies. Break **barrels** for scrap.
-5. Survive the nights. Raise your foundations (zombies can't climb them), upgrade your walls, and keep a sleeping bag down as a respawn point. When you die, your backpack stays where you fell.
+5. Use the **map** (M) to find the town, the checkpoint, your base and your backpack after a death. Survive the nights. Raise your foundations (zombies can't climb them), upgrade your walls, and keep a sleeping bag down as a respawn point. When you die, your backpack stays where you fell.
 
 The game autosaves every 60 seconds to `localStorage`. Use **Continue** on the title screen to resume.
 
@@ -81,6 +83,7 @@ The game autosaves every 60 seconds to `localStorage`. Use **Continue** on the t
 | `src/inventory.js`, `src/crafting.js` | Containers and the crafting queue |
 | `src/ui.js`, `index.html`, `style.css` | HUD, moodles, inventory drag-and-drop, crafting UI, menus |
 | `src/audio.js` | WebAudio-synthesized sound effects |
+| `src/map.js` | Island map: terrain render, grid, base/bag/backpack markers |
 | `src/devconsole.js` | Dev console, cheats, stats overlay and debug visualisations |
 | `src/gamepad.js` | Controller polling, gameplay mapping, rumble, aim slowdown, and the menu/inventory cursor |
 | `vendor/three.module.min.js` | three.js r170 (MIT, see `vendor/THREE_LICENSE`) |
@@ -95,7 +98,7 @@ Press **`** (backquote) or **F8** to open the developer console, and **F3** to t
 | Items | `give <item> [qty]`, `kit <starter\|builder\|guns\|smelt\|survival>`, `items [filter]`, `recipes`, `clearinv`, `ammo` (infinite), `freebuild`, `instacraft` |
 | World & time | `time <hour>`, `day <n>`, `timescale <x>`, `freezetime`, `respawnnodes`, `refillloot`, `save`, `load`, `wipesave` |
 | Zombies | `spawn [n] [dist]`, `horde [size]`, `killall [radius]`, `clearzombies`, `notarget`, `freezeai`, `nospawn`, `zombies [n]`, `noise <radius>` |
-| Debug views | `look` (inspect what's under the crosshair), `showcolliders`, `showhitboxes`, `showai`, `shownoise`, `showbullets`, `debugall`, `stats`, `info`, `js <expr>` |
+| Debug views | `look` (inspect what's under the crosshair), `mapzombies` (show zombies on the map), `showcolliders`, `showhitboxes`, `showai`, `shownoise`, `showbullets`, `debugall`, `stats`, `info`, `js <expr>` |
 
 Toggles accept an optional `on`/`off`; without one they flip. Cheats aren't saved, so a reload resets them.
 

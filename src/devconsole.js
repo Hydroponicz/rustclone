@@ -368,6 +368,7 @@ export class DevConsole {
       this.statsOn = on; this.statsEl.style.display = on ? 'block' : 'none';
       return `All debug views ${on ? 'ON' : 'OFF'}`;
     });
+    this.cmd('mapzombies', '[on|off]', 'Show zombies on the map (M)', (a) => { g.map.showZombies = onOff(a[0], g.map.showZombies); g.map.draw(); return `Zombies on map: ${g.map.showZombies ? 'ON' : 'OFF'}`; });
     this.cmd('recipes', '', 'List crafting recipes', () => RECIPES.map((r) => `${r.id.padEnd(14)} ×${r.qty}  ${r.time}s  ${Object.entries(r.cost).map(([k, v]) => `${v} ${k}`).join(', ')}`).join('\n'));
 
     // Assign groups for help output
@@ -377,7 +378,7 @@ export class DevConsole {
       Items: ['give', 'kit', 'items', 'recipes', 'clearinv', 'ammo', 'freebuild', 'instacraft'],
       'World & time': ['time', 'day', 'timescale', 'freezetime', 'respawnnodes', 'refillloot', 'save', 'load', 'wipesave'],
       Zombies: ['spawn', 'horde', 'killall', 'clearzombies', 'notarget', 'freezeai', 'nospawn', 'zombies', 'noise'],
-      Debug: ['look', 'showcolliders', 'showhitboxes', 'showai', 'shownoise', 'showbullets', 'debugall'],
+      Debug: ['look', 'mapzombies', 'showcolliders', 'showhitboxes', 'showai', 'shownoise', 'showbullets', 'debugall'],
     };
     for (const [grp, names] of Object.entries(groups)) for (const n of names) if (this.commands.has(n)) this.commands.get(n).group = grp;
     for (const c of this.commands.values()) c.group = c.group || 'Other';

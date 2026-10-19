@@ -238,3 +238,14 @@ body.pad .kbm-only { display: none; }
   display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, 28px);
   background: var(--bg); border: 1px solid var(--accent); padding: 6px 14px; font-size: 14px; color: var(--accent);
 }
+
+/* ---------------------------------------------------------------- map */
+#map {
+  position: fixed; inset: 0; z-index: 15; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  background: rgba(5, 8, 10, 0.72); pointer-events: none;
+}
+#map-canvas { border: 2px solid var(--accent); box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6); image-rendering: auto; }
+#map-info { background: var(--bg); padding: 4px 12px; font-size: 13px; display: flex; gap: 14px; align-items: center; }
+#map-info b { color: var(--accent); }
+#map-info .map-hint { color: var(--dim); }
+#map-info .map-dev { color: #ff8a7a; }

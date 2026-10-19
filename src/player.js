@@ -60,8 +60,8 @@ export class Player {
     const terrainH = this.game.terrain.heightAt(this.pos.x, this.pos.z);
     this.swimming = terrainH < WATER_LEVEL - 1.25 && this.pos.y < WATER_LEVEL - 0.9;
 
-    // --- look
-    if (locked) {
+    // --- look (disabled while the map is open; you can still walk)
+    if (locked && !this.game.map.open) {
       const sens = this.game.settings.sensitivity * (this.game.combat.adsAmount > 0.5 ? this.game.combat.adsSensMul : 1);
       this.yaw -= input.mouseDX * 0.0022 * sens;
       this.pitch -= input.mouseDY * 0.0022 * sens;

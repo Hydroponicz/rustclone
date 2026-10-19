@@ -328,6 +328,7 @@ export class World {
     this.lootSpots = [];
     this.rng = mulberry32(SEED);
     this.staticBuckets = new Map();
+    this.mapFeatures = []; // footprints for the map: { type, x, z, w, d }
   }
 
   build() {
@@ -427,6 +428,7 @@ export class World {
 
   _house(x, z, rot, rng) {
     const W = 9, D = 7.5, H = 2.9, T = 0.2;
+    this.mapFeatures.push({ type: 'house', x, z, w: rot & 1 ? D : W, d: rot & 1 ? W : D });
     const base = this.terrain.town.h + 0.3;
     const frame = { x, z, rot, y: base };
     const siding = pick(rng, MATS.siding);
@@ -481,6 +483,7 @@ export class World {
     const y = t.h + 0.02;
     // Roads (visual only)
     this.addStatic(t.x, y, t.z, 120, 0.04, 8, MATS.road, { collide: false, shadow: false });
+    this.mapFeatures.push({ type: 'road', x: t.x, z: t.z, w: 120, d: 8 }, { type: 'road', x: t.x, z: t.z, w: 8, d: 120 });
     this.addStatic(t.x, y + 0.005, t.z, 8, 0.04, 120, MATS.road, { collide: false, shadow: false });
     const lots = [];
     for (const k of [-3, -2, -1, 1, 2, 3]) {
@@ -509,8 +512,12 @@ export class World {
     const m = this.terrain.military, rng = this.rng;
     const y = m.h;
     this.addStatic(m.x, y + 0.02, m.z, 34, 0.04, 34, MATS.concrete, { collide: false, shadow: false });
+    this.mapFeatures.push({ type: 'pad', x: m.x, z: m.z, w: 34, d: 34 });
     // Sandbag perimeter with gaps
-    const bag = (cx, cz, sx, sz) => this.addStatic(cx, y + 0.55, cz, sx, 1.1, sz, MATS.sandbag);
+    const bag = (cx, cz, sx, sz) => {
+      this.mapFeatures.push({ type: 'sandbag', x: cx, z: cz, w: sx, d: sz });
+      return this.addStatic(cx, y + 0.55, cz, sx, 1.1, sz, MATS.sandbag);
+    };
     bag(m.x - 9, m.z - 16, 14, 1); bag(m.x + 9, m.z - 16, 14, 1);
     bag(m.x - 9, m.z + 16, 14, 1); bag(m.x + 9, m.z + 16, 14, 1);
     bag(m.x - 16, m.z - 9, 1, 14); bag(m.x - 16, m.z + 9, 1, 14);

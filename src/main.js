@@ -14,6 +14,7 @@ import { UI } from './ui.js';
 import { Audio } from './audio.js';
 import { PadState, PadGameplay, PadCursor } from './gamepad.js';
 import { DevConsole } from './devconsole.js';
+import { GameMap } from './map.js';
 
 const SAVE_KEY = 'rotrust_save_v1';
 const SETTINGS_KEY = 'rotrust_settings_v1';
@@ -167,6 +168,7 @@ class Game {
     this.ui = new UI(this);
     this.padGameplay = new PadGameplay(this);
     this.padCursor = new PadCursor(this);
+    this.map = new GameMap(this);
     this.dev = new DevConsole(this);
     this.currentInteract = null;
     window.addEventListener('gamepadconnected', (e) => this.ui.message(`Controller detected: ${e.gamepad.id.split('(')[0].trim()} (turn off in Settings if this isn't a controller)`));
@@ -268,6 +270,8 @@ class Game {
 
   onLockChange() {
     const locked = !!document.pointerLockElement;
+    // Esc with the map open closes the map rather than pausing (the browser eats that Esc).
+    if (!locked && this.map.open) { this.map.close(); this.ui.lastClosed = performance.now(); return; }
     // Losing the lock just after closing a container (e.g. the browser handling that same Esc press)
     // isn't a pause request.
     if (!locked && performance.now() - this.ui.lastClosed < 1500) return;
@@ -279,6 +283,7 @@ class Game {
 
   onResize() {
     const w = window.innerWidth, h = window.innerHeight;
+    if (this.map.open) { this.map._resize(); this.map.draw(); }
     this.renderer.setSize(w, h);
     this.camera.aspect = this.vmCamera.aspect = w / h;
     this.camera.updateProjectionMatrix();
@@ -389,6 +394,7 @@ class Game {
     this.inventory.clear();
     this.crafting.clear();
     this.ui.closeInventory(false);
+    this.map.close();
     this.combat.flashlightOn = false;
     this.combat.cancelActions();
     this.padGameplay.reset();
@@ -497,7 +503,16 @@ class Game {
       input.justPressed.delete('Tab');
       input.justPressed.delete('KeyI');
     } else if ((input.pressed('Tab') || input.pressed('KeyI')) && p.alive) {
+      this.map.close();
       this.ui.openInventory();
+    } else if (input.pressed('KeyM') && p.alive) {
+      this.map.toggle();
+    } else if (this.map.open && input.pressed('Escape')) {
+      this.map.close();
+    }
+    if (this.map.open && input.wheel) {
+      this.map.zoomBy(-input.wheel);
+      input.wheel = 0;
     }
     if (locked && p.alive) {
       for (let i = 0; i < 6; i++) if (input.pressed(`Digit${i + 1}`)) this.combat.selectSlot(i);
@@ -510,7 +525,8 @@ class Game {
     }
     this.env.update(this.cheats.freezeTime ? 0 : dt, this._v.set(p.pos.x, p.pos.y, p.pos.z));
     this.updateCamera();
-    this.combat.update(dt, input, locked && !this.ui.inventoryOpen);
+    this.combat.update(dt, input, locked && !this.ui.inventoryOpen && !this.map.open);
+    this.map.update(dt);
     this.zombies.update(dt);
     this.building.update(dt);
     this.world.update(dt, this.clock);
@@ -519,7 +535,7 @@ class Game {
 
     // Interaction prompt
     this.currentInteract = null;
-    if (locked && p.alive && !this.ui.inventoryOpen) {
+    if (locked && p.alive && !this.ui.inventoryOpen && !this.map.open) {
       const it = this.findInteractable();
       this.currentInteract = it;
       if (it) {

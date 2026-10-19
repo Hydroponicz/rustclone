@@ -4,7 +4,7 @@
 //   Left stick  move            L3  sprint (toggle)      Right stick  look       R3  fire mode
 //   RT          fire / use      LT  aim / alt action     LB / RB      prev / next belt slot
 //   A           jump            B   crouch (toggle)      X  interact (tap) / reload (hold, or tap with nothing to interact)
-//   Y / View    inventory       D-pad ↑ flashlight  ↓ check mag  ← demolish  → reload / cycle piece
+//   Y           inventory       View  map   D-pad ↑ flashlight  ↓ check mag  ← demolish  → reload / cycle piece
 //   Menu/Start  pause
 //
 // Menus and inventory use a virtual cursor: left stick moves it, the D-pad snaps it to the next
@@ -159,9 +159,16 @@ export class PadGameplay {
     if (pad.pressed(PAD.LT)) input.justClicked.add(2);
 
     if (pad.pressed(PAD.A)) tap('Space');
-    if (pad.pressed(PAD.Y) || pad.pressed(PAD.BACK)) tap('Tab');
-    if (pad.pressed(PAD.LB)) input.wheel -= 1;
-    if (pad.pressed(PAD.RB)) input.wheel += 1;
+    if (pad.pressed(PAD.Y)) tap('Tab');
+    if (pad.pressed(PAD.BACK)) tap('KeyM');
+    if (game.map.open) {
+      // Bumpers zoom the map instead of switching slots (RB in, LB out).
+      if (pad.pressed(PAD.RB)) game.map.zoomBy(1);
+      if (pad.pressed(PAD.LB)) game.map.zoomBy(-1);
+    } else {
+      if (pad.pressed(PAD.LB)) input.wheel -= 1;
+      if (pad.pressed(PAD.RB)) input.wheel += 1;
+    }
     if (pad.pressed(PAD.R3)) tap('KeyB');
     if (pad.pressed(PAD.UP)) tap('KeyF');
     if (pad.pressed(PAD.DOWN)) tap('KeyT');
