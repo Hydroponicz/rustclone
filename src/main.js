@@ -119,7 +119,7 @@ class Game {
   constructor() {
     this.clock = 0;
     this.stats = { kills: 0 };
-    this.settings = { sensitivity: 1, fov: 75, volume: 0.6, maxZombies: 60, padSens: 1, invertY: false };
+    this.settings = { sensitivity: 1, fov: 75, volume: 0.6, maxZombies: 60, padSens: 1, invertY: false, padEnabled: true };
     try { Object.assign(this.settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch { /* ignore */ }
     this.objectivesDone = new Set();
 
@@ -161,7 +161,7 @@ class Game {
     this.padGameplay = new PadGameplay(this);
     this.padCursor = new PadCursor(this);
     this.currentInteract = null;
-    window.addEventListener('gamepadconnected', (e) => this.ui.message(`Controller connected: ${e.gamepad.id.split('(')[0].trim()}`));
+    window.addEventListener('gamepadconnected', (e) => this.ui.message(`Controller detected: ${e.gamepad.id.split('(')[0].trim()} (turn off in Settings if this isn't a controller)`));
     window.addEventListener('gamepaddisconnected', () => {
       this.ui.message('Controller disconnected', 'warn');
       if (this.running && !document.pointerLockElement && !this.debugLock) this.pause();
@@ -192,9 +192,9 @@ class Game {
     $('menu-save').onclick = () => { this.save(); this.ui.message('Game saved.'); };
     $('death-bag').onclick = () => this.respawn(true);
     $('death-beach').onclick = () => this.respawn(false);
-    const sens = $('set-sens'), fov = $('set-fov'), vol = $('set-vol'), zc = $('set-zombies'), psens = $('set-padsens'), inv = $('set-invert');
+    const sens = $('set-sens'), fov = $('set-fov'), vol = $('set-vol'), zc = $('set-zombies'), psens = $('set-padsens'), inv = $('set-invert'), pen = $('set-padenabled');
     sens.value = this.settings.sensitivity; fov.value = this.settings.fov; vol.value = this.settings.volume; zc.value = this.settings.maxZombies;
-    psens.value = this.settings.padSens; inv.checked = !!this.settings.invertY;
+    psens.value = this.settings.padSens; inv.checked = !!this.settings.invertY; pen.checked = this.settings.padEnabled !== false;
     const apply = () => {
       this.settings.sensitivity = Number(sens.value);
       this.settings.fov = Number(fov.value);
@@ -202,6 +202,9 @@ class Game {
       this.settings.maxZombies = Number(zc.value);
       this.settings.padSens = Number(psens.value);
       this.settings.invertY = inv.checked;
+      this.settings.padEnabled = pen.checked;
+      this.input.pad.enabled = pen.checked;
+      if (!pen.checked) this.input.lastDevice = 'kbm';
       $('set-padsens-v').textContent = this.settings.padSens.toFixed(2);
       this.audio.volume = this.settings.volume;
       if (this.audio.master) this.audio.master.gain.value = this.settings.volume;
@@ -211,8 +214,8 @@ class Game {
       $('set-zombies-v').textContent = this.settings.maxZombies;
       try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(this.settings)); } catch { /* ignore */ }
     };
-    [sens, fov, vol, zc, psens, inv].forEach((e) => (e.oninput = apply));
-    inv.onchange = apply;
+    [sens, fov, vol, zc, psens, inv, pen].forEach((e) => (e.oninput = apply));
+    inv.onchange = pen.onchange = apply;
     apply();
     document.getElementById('game').addEventListener('click', () => {
       if (this.started && !this.ui.inventoryOpen && this.player.alive) this.lock();

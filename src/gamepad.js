@@ -30,20 +30,41 @@ function radialDeadzone(x, y) {
 export class PadState {
   constructor() {
     this.connected = false;
+    this.enabled = true;
     this.id = '';
     this.now = new Array(17).fill(false);
     this.prev = new Array(17).fill(false);
     this.values = new Array(17).fill(0);
     this.lx = 0; this.ly = 0; this.rx = 0; this.ry = 0;
     this.used = false; // any meaningful input this frame
+    this._resetCalibration();
+  }
+
+  // Inputs are ignored until they have been seen at rest. Devices whose axes never centre
+  // (triggers reporting -1, wheels, pedals, badly drifting sticks) or whose buttons read as
+  // permanently pressed can then never spin the camera or hijack the input mode.
+  _resetCalibration() {
+    this.axisArmed = [false, false, false, false];
+    this.axisRestT = [0, 0, 0, 0];
+    this.buttonArmed = new Array(17).fill(false);
+    this._lastPoll = 0;
+  }
+
+  _pick(pads) {
+    let fallback = null;
+    for (const p of pads) {
+      if (!p || !p.connected) continue;
+      if (p.mapping === 'standard') return p;
+      fallback = fallback || p;
+    }
+    return fallback;
   }
 
   poll() {
     this.prev = this.now.slice();
     this.used = false;
-    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-    let gp = null;
-    for (const p of pads) if (p && p.connected) { gp = p; break; }
+    const pads = this.enabled && navigator.getGamepads ? navigator.getGamepads() : [];
+    const gp = this._pick(pads || []);
     this.gp = gp;
     if (!gp) {
       this.connected = false;
@@ -51,17 +72,34 @@ export class PadState {
       this.lx = this.ly = this.rx = this.ry = 0;
       return;
     }
+    if (gp.id !== this.id || !this.connected) this._resetCalibration();
     this.connected = true;
     this.id = gp.id;
+    const t = performance.now();
+    const dt = this._lastPoll ? Math.min(0.1, (t - this._lastPoll) / 1000) : 0;
+    this._lastPoll = t;
+
     for (let i = 0; i < 17; i++) {
       const b = gp.buttons[i];
       const v = b ? b.value : 0;
+      const pressed = !!b && (i === PAD.LT || i === PAD.RT ? v > TRIGGER_THRESHOLD : b.pressed || v > 0.5);
+      if (!pressed) this.buttonArmed[i] = true;
       this.values[i] = v;
-      this.now[i] = !!b && (i === PAD.LT || i === PAD.RT ? v > TRIGGER_THRESHOLD : b.pressed || v > 0.5);
-      if (this.now[i]) this.used = true;
+      this.now[i] = pressed && this.buttonArmed[i];
+      if (this.now[i] && !this.prev[i]) this.used = true;
     }
-    [this.lx, this.ly] = radialDeadzone(gp.axes[0] || 0, gp.axes[1] || 0);
-    [this.rx, this.ry] = radialDeadzone(gp.axes[2] || 0, gp.axes[3] || 0);
+    const ax = [];
+    for (let a = 0; a < 4; a++) {
+      const v = gp.axes[a] || 0;
+      if (!this.axisArmed[a]) {
+        // Must sit near centre for a moment before the axis is trusted.
+        this.axisRestT[a] = Math.abs(v) < 0.12 ? this.axisRestT[a] + dt : 0;
+        if (this.axisRestT[a] > 0.25) this.axisArmed[a] = true;
+      }
+      ax[a] = this.axisArmed[a] ? v : 0;
+    }
+    [this.lx, this.ly] = radialDeadzone(ax[0], ax[1]);
+    [this.rx, this.ry] = radialDeadzone(ax[2], ax[3]);
     if (this.lx || this.ly || this.rx || this.ry) this.used = true;
   }
 
