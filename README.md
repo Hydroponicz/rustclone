@@ -90,7 +90,7 @@ The game autosaves every 60 seconds to `localStorage`. Use **Continue** on the t
 
 ## Debug panel
 
-Press **`** (backquote) or **F8** to open the debug panel (controller: click both sticks, **L3+R3**). It's a side panel of checkboxes, sliders and buttons, and the game keeps running behind it. **F3** toggles a compact stats overlay that stays visible while you play.
+Press **`** (backquote) or **F8** to open the debug panel. It's a side panel of checkboxes, sliders and buttons that you use with the mouse, and the game keeps running behind it. A controller keeps controlling the game while the panel is open, so you can play on the pad and flip settings with the mouse. **F3** toggles a compact stats overlay that stays visible while you play.
 
 | Section | What's in it |
 | --- | --- |

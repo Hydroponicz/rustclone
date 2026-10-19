@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { ITEMS, RECIPES } from './items.js';
 import { fmtTime } from './util.js';
 
-// Developer debug panel: press ` (backquote) or F8 (controller: L3+R3). Checkboxes, sliders and
+// Developer debug panel: press ` (backquote) or F8. It's mouse-driven; a controller keeps playing
+// the game while it's open. Checkboxes, sliders and
 // buttons for cheats, spawning, time and debug views, plus a command line (type `help`).
 
 const HISTORY_KEY = 'rotrust_console_history';
@@ -43,7 +44,7 @@ export class DevConsole {
     const root = document.createElement('div');
     root.id = 'devconsole';
     root.innerHTML = `
-      <div id="dp-head"><b>Debug panel</b><span class="dp-keys">\` / F8 · pad L3+R3</span><button id="dp-close" title="Close">✕</button></div>
+      <div id="dp-head"><b>Debug panel</b><span class="dp-keys">\` / F8 · mouse only, controller keeps playing</span><button id="dp-close" title="Close">✕</button></div>
       <div id="dp-body"></div>`;
     document.body.appendChild(root);
     this.root = root;

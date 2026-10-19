@@ -46,6 +46,8 @@ class Input {
     window.addEventListener('mousedown', (e) => { this.lastDevice = 'kbm'; this.buttons.add(e.button); this.justClicked.add(e.button); });
     window.addEventListener('mouseup', (e) => this.buttons.delete(e.button));
     window.addEventListener('mousemove', (e) => {
+      // Using the mouse on the debug panel shouldn't take control away from a controller.
+      if (e.target && e.target.closest && e.target.closest('#devconsole')) return;
       if (Math.abs(e.movementX) + Math.abs(e.movementY) > 2) this.lastDevice = 'kbm';
       if (document.pointerLockElement) { this._dx += e.movementX; this._dy += e.movementY; }
     });
@@ -283,6 +285,8 @@ class Game {
 
   onLockChange() {
     const locked = !!document.pointerLockElement;
+    // A lock that lands after the debug panel opened would make the panel unclickable.
+    if (locked && this.dev.open) { document.exitPointerLock(); return; }
     // Esc with the map open closes the map rather than pausing (the browser eats that Esc).
     if (!locked && this.map.open) { this.map.close(); this.ui.lastClosed = performance.now(); return; }
     // Losing the lock just after closing a container (e.g. the browser handling that same Esc press)
