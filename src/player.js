@@ -84,12 +84,15 @@ export class Player {
       if (input.down('KeyS')) mz += 1;
       if (input.down('KeyA')) mx -= 1;
       if (input.down('KeyD')) mx += 1;
+      // Analog stick adds proportional movement (keys still give full speed).
+      mx += input.moveX;
+      mz += input.moveY;
     }
     const len = Math.hypot(mx, mz);
-    if (len > 0) { mx /= len; mz /= len; }
+    if (len > 1) { mx /= len; mz /= len; }
     const ads = this.game.combat.adsAmount > 0.3;
     const wantSprint = locked && input.down('ShiftLeft') && mz < 0 && !this.crouching && !ads && !this.swimming;
-    this.sprinting = wantSprint && this.stamina > 1 && len > 0;
+    this.sprinting = wantSprint && this.stamina > 1 && len > 0.3;
     let speed = this.crouching ? 1.7 : this.sprinting ? 6.2 : 3.6;
     if (ads) speed *= 0.6;
     if (this.swimming) speed = 2.0;

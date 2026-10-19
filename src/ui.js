@@ -3,6 +3,10 @@ import { fmtTime } from './util.js';
 
 const $ = (id) => document.getElementById(id);
 
+// Button names shown in prompts for keyboard/mouse and for controllers.
+const KEY_LABELS = { LMB: 'LMB', RMB: 'RMB', E: 'E', R: 'R', T: 'T', B: 'B', F: 'F', X: 'X', Tab: 'Tab' };
+const PAD_LABELS = { LMB: 'RT', RMB: 'LT', E: 'Ⓧ', R: 'D-pad →', T: 'D-pad ↓', B: 'R3', F: 'D-pad ↑', X: 'D-pad ←', Tab: 'Ⓨ' };
+
 function el(tag, cls, html) {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -56,6 +60,10 @@ export class UI {
     this._buildCraftUI();
     this._bindDrag();
     this.ghost = $('drag-ghost');
+  }
+
+  key(name) {
+    return (this.game.input.lastDevice === 'pad' ? PAD_LABELS : KEY_LABELS)[name] || name;
   }
 
   // ------------------------------------------------------------------ per-frame helpers
@@ -283,31 +291,41 @@ export class UI {
         this._quickMove(slot.dataset.c, i);
         return;
       }
-      this.drag = { c: slot.dataset.c, i, split: e.ctrlKey };
-      this.ghost.innerHTML = this._slotHTML(item);
-      this.ghost.style.display = 'flex';
-      this._moveGhost(e);
+      this.startDrag(slot, e.ctrlKey, e.clientX, e.clientY);
     });
     window.addEventListener('pointermove', (e) => this.drag && this._moveGhost(e));
     window.addEventListener('pointerup', (e) => {
-      if (!this.drag) return;
-      const target = document.elementFromPoint(e.clientX, e.clientY);
-      const slot = target && target.closest('.slot');
-      const src = this._containerOf(this.drag.c);
-      if (slot && slot.dataset.c) {
-        this._move(src, this.drag.i, this._containerOf(slot.dataset.c), Number(slot.dataset.i), this.drag.split);
-      } else if (target && !target.closest('.panel')) {
-        // Dropped outside the panels: throw it on the ground.
-        const it = src.slots[this.drag.i];
-        if (it) {
-          src.slots[this.drag.i] = null;
-          src.changed();
-          this.game.dropItems([it]);
-        }
-      }
-      this._endDrag();
-      this.refresh();
+      if (this.drag) this.dropAt(e.clientX, e.clientY);
     });
+  }
+
+  startDrag(slot, split, x, y) {
+    const item = this._containerOf(slot.dataset.c).slots[Number(slot.dataset.i)];
+    if (!item) return;
+    this.drag = { c: slot.dataset.c, i: Number(slot.dataset.i), split };
+    this.ghost.innerHTML = this._slotHTML(item);
+    this.ghost.style.display = 'flex';
+    this._moveGhost({ clientX: x, clientY: y });
+  }
+
+  // Drop the dragged item onto whatever is at (x, y): a slot, or the ground if outside the panels.
+  dropAt(x, y) {
+    if (!this.drag) return;
+    const target = document.elementFromPoint(x, y);
+    const slot = target && target.closest('.slot');
+    const src = this._containerOf(this.drag.c);
+    if (slot && slot.dataset.c) {
+      this._move(src, this.drag.i, this._containerOf(slot.dataset.c), Number(slot.dataset.i), this.drag.split);
+    } else if (target && !target.closest('.panel')) {
+      const it = src.slots[this.drag.i];
+      if (it) {
+        src.slots[this.drag.i] = null;
+        src.changed();
+        this.game.dropItems([it]);
+      }
+    }
+    this._endDrag();
+    this.refresh();
   }
 
   _moveGhost(e) {
@@ -405,6 +423,13 @@ export class UI {
       this.game.crafting.cancel(Number(q.dataset.k));
       this.refresh();
     });
+  }
+
+  cycleCraftTab(dir) {
+    const cats = [...new Set(RECIPES.map((r) => r.cat))];
+    this.craftCat = cats[(cats.indexOf(this.craftCat) + dir + cats.length) % cats.length];
+    this._refreshCraft();
+    this.game.audio.play('ui');
   }
 
   _refreshCraft() {

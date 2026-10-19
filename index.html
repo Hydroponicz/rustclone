@@ -41,7 +41,8 @@
       <div id="inv-grid" class="grid"></div>
       <h4>Belt</h4>
       <div id="inv-hotbar" class="grid"></div>
-      <p class="hint">Drag to move · Shift+click quick-move · Ctrl+drag split · Right-click use / unload · Drag outside to drop</p>
+      <p class="hint kbm-only">Drag to move · Shift+click quick-move · Ctrl+drag split · Right-click use / unload · Drag outside to drop</p>
+      <p class="hint pad-only">Ⓐ pick up / drop · LT+Ⓐ split · Ⓧ quick-move · Ⓨ use / unload · drop outside panels to discard · Ⓑ close</p>
     </div>
     <div class="panel" id="container-panel">
       <h3 id="cont-title">Container</h3>
@@ -55,7 +56,8 @@
       <h3>Crafting</h3>
       <div id="craft-tabs"></div>
       <div id="craft-list"></div>
-      <p class="hint">Shift+click Craft to queue 5 · Click the queue (bottom right) to cancel</p>
+      <p class="hint kbm-only">Shift+click Craft to queue 5 · Click the queue (bottom right) to cancel</p>
+      <p class="hint pad-only">LB / RB switch tabs · Ⓐ craft · Ⓧ craft 5 · Ⓐ on the queue (bottom right) cancels · right stick scrolls</p>
     </div>
   </div>
 
@@ -65,6 +67,7 @@
     <div class="menu-box">
       <h1>ROT <span>&amp;</span> RUST</h1>
       <p class="tag">Scavenge. Build. Hold the line against the dead.</p>
+      <p class="tag pad-only">Controller: move the cursor with the left stick or D-pad, Ⓐ to select.</p>
       <div class="menu-buttons">
         <button id="menu-resume">Resume</button>
         <button id="menu-continue">Continue</button>
@@ -87,6 +90,18 @@
             <tr><td>Hammer: LMB / RMB / X×2</td><td>Repair / upgrade / demolish</td></tr>
             <tr><td>Esc</td><td>Pause</td></tr>
           </table>
+          <h4 class="sub">Controller</h4>
+          <table>
+            <tr><td>Left stick · L3</td><td>Move · sprint (toggle)</td></tr>
+            <tr><td>Right stick · R3</td><td>Look · fire mode</td></tr>
+            <tr><td>RT · LT</td><td>Attack/use/place · aim (or alt action)</td></tr>
+            <tr><td>Ⓐ · Ⓑ</td><td>Jump · crouch (toggle)</td></tr>
+            <tr><td>Ⓧ</td><td>Interact · hold (or nothing to interact) to reload</td></tr>
+            <tr><td>Ⓨ / View</td><td>Inventory &amp; crafting</td></tr>
+            <tr><td>LB · RB</td><td>Previous · next belt slot</td></tr>
+            <tr><td>D-pad ↑ ↓ ← →</td><td>Flashlight · check mag · demolish · reload/cycle piece</td></tr>
+            <tr><td>Menu</td><td>Pause</td></tr>
+          </table>
         </div>
         <div class="settings">
           <h4>Settings</h4>
@@ -94,6 +109,8 @@
           <label>Field of view <span id="set-fov-v"></span><input id="set-fov" type="range" min="60" max="100" step="1" /></label>
           <label>Volume <span id="set-vol-v"></span><input id="set-vol" type="range" min="0" max="1" step="0.05" /></label>
           <label>Max zombies <span id="set-zombies-v"></span><input id="set-zombies" type="range" min="10" max="120" step="5" /></label>
+          <label>Controller look sensitivity <span id="set-padsens-v"></span><input id="set-padsens" type="range" min="0.3" max="3" step="0.05" /></label>
+          <label class="check"><input id="set-invert" type="checkbox" /> Invert controller Y axis</label>
           <h4>Survival tips</h4>
           <ul>
             <li>Gunshots carry far. Every zombie in earshot will come looking.</li>

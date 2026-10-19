@@ -36,6 +36,24 @@ Then open http://localhost:8080. It works on any static host (GitHub Pages, Netl
 
 Inventory: drag to move, Shift+click to quick-move, Ctrl+drag to split a stack, right-click to use or unload, drag outside the panels to drop.
 
+### Controller
+
+Any standard gamepad works (Xbox, PlayStation, Switch Pro and others the browser recognizes). Plug it in and press a button. Prompts switch to controller buttons automatically, and you can switch back to mouse and keyboard at any time.
+
+| Button | Action |
+| --- | --- |
+| Left stick / L3 | Move (analog) / sprint toggle |
+| Right stick / R3 | Look / fire mode |
+| RT / LT | Attack, use or place / aim down sights (upgrade with the hammer, cycle piece with the building plan) |
+| A / B | Jump / crouch toggle |
+| X | Interact. Hold it, or tap it when there's nothing to interact with, to reload |
+| Y or View | Inventory and crafting |
+| LB / RB | Previous / next belt slot |
+| D-pad ↑ ↓ ← → | Flashlight / check mag / demolish / reload or cycle building piece |
+| Menu | Pause |
+
+In menus and the inventory, a cursor appears. The left stick moves it, the D-pad snaps it between buttons and slots, and A selects, picks up or drops. X quick-moves an item (or crafts 5), Y uses or unloads an item, LT+A splits a stack, LB/RB switch crafting tabs, the right stick scrolls, and B goes back. D-pad left/right adjusts sliders. Look sensitivity and invert Y are in Settings. Firing and taking hits trigger rumble, and look speed slows slightly while your sights are over a zombie.
+
 ## The loop
 
 1. Wake up on a beach with a rock. Hit trees for **wood** and rocks for **stone**, **metal ore** (brown) and **sulfur ore** (yellow). Pick **hemp** (E) for cloth.
@@ -63,6 +81,7 @@ The game autosaves every 60 seconds to `localStorage`. Use **Continue** on the t
 | `src/inventory.js`, `src/crafting.js` | Containers and the crafting queue |
 | `src/ui.js`, `index.html`, `style.css` | HUD, moodles, inventory drag-and-drop, crafting UI, menus |
 | `src/audio.js` | WebAudio-synthesized sound effects |
+| `src/gamepad.js` | Controller polling, gameplay mapping, rumble, aim slowdown, and the menu/inventory cursor |
 | `vendor/three.module.min.js` | three.js r170 (MIT, see `vendor/THREE_LICENSE`) |
 
 Add `?debuglock` to the URL to let automated tests drive the game without pointer lock. The game object is exposed as `window.game` for console tinkering.

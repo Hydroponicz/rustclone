@@ -12,6 +12,7 @@ import { ZombieManager } from './zombies.js';
 import { Crafting } from './crafting.js';
 import { UI } from './ui.js';
 import { Audio } from './audio.js';
+import { PadState, PadGameplay, PadCursor } from './gamepad.js';
 
 const SAVE_KEY = 'rotrust_save_v1';
 const SETTINGS_KEY = 'rotrust_settings_v1';
@@ -26,29 +27,45 @@ class Input {
     this.mouseDX = 0; this.mouseDY = 0;
     this._dx = 0; this._dy = 0;
     this.wheel = 0; this._wheel = 0;
+    // Controller: raw state plus virtual keys/buttons it holds this frame.
+    this.pad = new PadState();
+    this.padKeys = new Set();
+    this.padButtons = new Set();
+    this.moveX = 0; this.moveY = 0;
+    this.lastDevice = 'kbm';
     window.addEventListener('keydown', (e) => {
+      this.lastDevice = 'kbm';
       if (e.code === 'Tab') e.preventDefault();
       if (!e.repeat) this.justPressed.add(e.code);
       this.keys.add(e.code);
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => { this.keys.clear(); this.buttons.clear(); });
-    window.addEventListener('mousedown', (e) => { this.buttons.add(e.button); this.justClicked.add(e.button); });
+    window.addEventListener('mousedown', (e) => { this.lastDevice = 'kbm'; this.buttons.add(e.button); this.justClicked.add(e.button); });
     window.addEventListener('mouseup', (e) => this.buttons.delete(e.button));
     window.addEventListener('mousemove', (e) => {
+      if (Math.abs(e.movementX) + Math.abs(e.movementY) > 2) this.lastDevice = 'kbm';
       if (document.pointerLockElement) { this._dx += e.movementX; this._dy += e.movementY; }
     });
     window.addEventListener('wheel', (e) => { this._wheel += Math.sign(e.deltaY); }, { passive: true });
   }
-  down(...codes) { return codes.some((c) => this.keys.has(c)); }
+  down(...codes) { return codes.some((c) => this.keys.has(c) || this.padKeys.has(c)); }
   pressed(code) { return this.justPressed.has(code); }
-  mouseDown(b) { return this.buttons.has(b); }
+  mouseDown(b) { return this.buttons.has(b) || this.padButtons.has(b); }
   mousePressed(b) { return this.justClicked.has(b); }
   beginFrame() {
     this.mouseDX = this._dx; this.mouseDY = this._dy;
     this._dx = this._dy = 0;
     this.wheel = this._wheel; this._wheel = 0;
+    this.padKeys.clear();
+    this.padButtons.clear();
+    this.moveX = this.moveY = 0;
+    this.pad.poll();
+    if (this.pad.used) this.lastDevice = 'pad';
   }
+  // True while a controller is driving the game (no pointer lock needed).
+  get padActive() { return this.pad.connected && this.lastDevice === 'pad'; }
+  rumble(strong, weak, ms) { if (this.padActive) this.pad.rumble(strong, weak, ms); }
   endFrame() { this.justPressed.clear(); this.justClicked.clear(); }
 }
 
@@ -102,7 +119,7 @@ class Game {
   constructor() {
     this.clock = 0;
     this.stats = { kills: 0 };
-    this.settings = { sensitivity: 1, fov: 75, volume: 0.6, maxZombies: 60 };
+    this.settings = { sensitivity: 1, fov: 75, volume: 0.6, maxZombies: 60, padSens: 1, invertY: false };
     try { Object.assign(this.settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch { /* ignore */ }
     this.objectivesDone = new Set();
 
@@ -141,6 +158,14 @@ class Game {
     this.zombies = new ZombieManager(this);
     this.crafting = new Crafting(this);
     this.ui = new UI(this);
+    this.padGameplay = new PadGameplay(this);
+    this.padCursor = new PadCursor(this);
+    this.currentInteract = null;
+    window.addEventListener('gamepadconnected', (e) => this.ui.message(`Controller connected: ${e.gamepad.id.split('(')[0].trim()}`));
+    window.addEventListener('gamepaddisconnected', () => {
+      this.ui.message('Controller disconnected', 'warn');
+      if (this.running && !document.pointerLockElement && !this.debugLock) this.pause();
+    });
     this.bags = [];
     this.inventory.onChange = () => this.ui.refresh();
 
@@ -167,13 +192,17 @@ class Game {
     $('menu-save').onclick = () => { this.save(); this.ui.message('Game saved.'); };
     $('death-bag').onclick = () => this.respawn(true);
     $('death-beach').onclick = () => this.respawn(false);
-    const sens = $('set-sens'), fov = $('set-fov'), vol = $('set-vol'), zc = $('set-zombies');
+    const sens = $('set-sens'), fov = $('set-fov'), vol = $('set-vol'), zc = $('set-zombies'), psens = $('set-padsens'), inv = $('set-invert');
     sens.value = this.settings.sensitivity; fov.value = this.settings.fov; vol.value = this.settings.volume; zc.value = this.settings.maxZombies;
+    psens.value = this.settings.padSens; inv.checked = !!this.settings.invertY;
     const apply = () => {
       this.settings.sensitivity = Number(sens.value);
       this.settings.fov = Number(fov.value);
       this.settings.volume = Number(vol.value);
       this.settings.maxZombies = Number(zc.value);
+      this.settings.padSens = Number(psens.value);
+      this.settings.invertY = inv.checked;
+      $('set-padsens-v').textContent = this.settings.padSens.toFixed(2);
       this.audio.volume = this.settings.volume;
       if (this.audio.master) this.audio.master.gain.value = this.settings.volume;
       $('set-sens-v').textContent = this.settings.sensitivity.toFixed(2);
@@ -182,7 +211,8 @@ class Game {
       $('set-zombies-v').textContent = this.settings.maxZombies;
       try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(this.settings)); } catch { /* ignore */ }
     };
-    [sens, fov, vol, zc].forEach((e) => (e.oninput = apply));
+    [sens, fov, vol, zc, psens, inv].forEach((e) => (e.oninput = apply));
+    inv.onchange = apply;
     apply();
     document.getElementById('game').addEventListener('click', () => {
       if (this.started && !this.ui.inventoryOpen && this.player.alive) this.lock();
@@ -204,12 +234,20 @@ class Game {
     this.running = true;
     this.ui.hideMenu();
     this.ui.refresh();
-    this.lock();
+    if (!this.input.padActive) this.lock();
+  }
+
+  pause() {
+    if (!this.running) return;
+    this.running = false;
+    this.ui.closeInventory(false);
+    if (document.pointerLockElement) document.exitPointerLock();
+    this.ui.showMenu('pause');
   }
 
   onLockChange() {
     const locked = !!document.pointerLockElement;
-    if (!locked && this.started && !this.ui.inventoryOpen && this.player.alive) {
+    if (!locked && this.started && !this.ui.inventoryOpen && this.player.alive && !this.input.padActive) {
       this.running = false;
       this.ui.showMenu('pause');
     }
@@ -241,7 +279,8 @@ class Game {
     this.player.pitch = 0;
     this.combat.slot = 0;
     this.ui.message('You wake up on a beach. The dead walk. Gather, build, survive.', 'warn');
-    this.ui.message('LMB: hit trees & rocks · Tab: inventory/crafting · E: interact');
+    const k = (n) => this.ui.key(n);
+    this.ui.message(`${k('LMB')}: hit trees & rocks · ${k('Tab')}: inventory/crafting · ${k('E')}: interact`);
   }
 
   giveStartKit() {
@@ -263,6 +302,7 @@ class Game {
     p.health -= amount;
     if (!silent) {
       this.ui.damageFlash(amount);
+      this.input.rumble(0.4 + amount / 30, 0.6, 180);
       this.audio.play('hurt');
       p.lastHurt = this.clock;
     }
@@ -325,6 +365,7 @@ class Game {
     this.ui.closeInventory(false);
     this.combat.flashlightOn = false;
     this.combat.cancelActions();
+    this.padGameplay.reset();
     if (document.pointerLockElement) document.exitPointerLock();
     const cause = source === 'zombie' ? 'Killed by the dead' : source === 'fall' ? 'Fell to your death' : source === 'status' ? (p.infection >= 1 ? 'Succumbed to the infection' : 'Died of exposure') : 'You died';
     this.ui.showDeath(`${cause}. Survived until day ${this.env.day}, ${this.stats.kills} zombies put down. Your backpack was left where you fell.`);
@@ -386,7 +427,8 @@ class Game {
     }
     const el = document.getElementById('objective');
     const cur = OBJECTIVES.find((o) => !this.objectivesDone.has(o.id));
-    el.innerHTML = cur ? `<b>Objective</b> ${cur.text}` : '<b>Objective</b> Keep surviving. The nights get worse.';
+    const text = cur ? cur.text.replace('[Tab]', `[${this.ui.key('Tab')}]`).replace('(RMB)', `(${this.ui.key('RMB')})`) : '';
+    el.innerHTML = cur ? `<b>Objective</b> ${text}` : '<b>Objective</b> Keep surviving. The nights get worse.';
   }
 
   // ------------------------------------------------------------------ main loop
@@ -394,10 +436,19 @@ class Game {
     requestAnimationFrame((tt) => this.frame(tt));
     const dt = Math.min(0.05, (t - this.last) / 1000);
     this.last = t;
+    this.tick(dt);
+    this.render();
+  }
+
+  tick(dt) {
     this.input.beginFrame();
     this.ui.beginFrame();
+    document.body.classList.toggle('pad', this.input.lastDevice === 'pad');
+    // Controller drives either the on-screen cursor (menus/inventory) or the game itself.
+    const uiRoot = this.padCursor.currentRoot();
+    this.padCursor.update(dt);
+    if (!uiRoot && this.running) this.padGameplay.apply(dt);
     if (this.running) this.update(dt);
-    this.render();
     this.ui.endFrame();
     this.input.endFrame();
   }
@@ -405,7 +456,7 @@ class Game {
   update(dt) {
     this.clock += dt;
     const input = this.input;
-    const locked = !!document.pointerLockElement || this.debugLock;
+    const locked = !!document.pointerLockElement || this.debugLock || this.input.padActive;
     const p = this.player;
 
     // Global keys
@@ -433,10 +484,12 @@ class Game {
     for (const b of [...this.bags]) if (this.clock > b.expires && this.ui.openTarget !== b) b.remove();
 
     // Interaction prompt
+    this.currentInteract = null;
     if (locked && p.alive && !this.ui.inventoryOpen) {
       const it = this.findInteractable();
+      this.currentInteract = it;
       if (it) {
-        this.ui.prompt(`[E] ${it.label}`);
+        this.ui.prompt(`[${this.ui.key('E')}] ${it.label}`);
         if (input.pressed('KeyE')) it.act();
       }
     }

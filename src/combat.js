@@ -255,6 +255,7 @@ export class Combat {
     player.pitch += v * 0.35 * DEG;
     player.yaw += h * 0.3 * DEG;
     game.viewmodel.addKick(gun.recoilV * 0.25);
+    game.input.rumble(Math.min(1, gun.recoilV / 7), 0.5, gun.pellets > 1 || gun.model === 'bolt' ? 140 : 70);
     game.viewmodel.muzzleFlash();
     this.muzzleLight.position.copy(origin).addScaledVector(fwd, 1);
     this.muzzleLight.intensity = 8;
@@ -364,6 +365,7 @@ export class Combat {
       game.zombies.damage(zh.zombie, melee.dmg * mul, zh.part, d, 'melee');
       this._burst(o.clone().addScaledVector(d, zh.t), 'blood', 6);
       game.audio.play('zhit');
+      game.input.rumble(0.5, 0.3, 90);
       game.makeNoise(game.player.pos.x, game.player.pos.z, 8);
       return;
     }
@@ -451,7 +453,8 @@ export class Combat {
     bm.showGhost(plan);
     const cost = scaledCost(TIERS[0].cost, PIECES[type].mult);
     const afford = game.inventory.has(cost);
-    game.ui.buildInfo(`${PIECES[type].name} — ${costText(cost)}`, plan.valid ? (afford ? '' : 'Not enough resources') : plan.reason, '[RMB/R] change piece  [LMB] place');
+    const k = (n) => game.ui.key(n);
+    game.ui.buildInfo(`${PIECES[type].name} — ${costText(cost)}`, plan.valid ? (afford ? '' : 'Not enough resources') : plan.reason, `[${k('RMB')}/${k('R')}] change piece  [${k('LMB')}] place`);
     if (canAct && input.mousePressed(0) && plan.valid) bm.placeFromPlan(plan);
   }
 
@@ -461,7 +464,7 @@ export class Combat {
     const { o, d } = this._aim();
     const plan = def.deploy === 'door' ? bm.planDoor({ o, d }) : bm.planDeploy(def.deploy, { o, d });
     bm.showGhost(plan);
-    game.ui.buildInfo(`Place ${def.name}`, plan.valid ? '' : plan.reason, '[LMB] place');
+    game.ui.buildInfo(`Place ${def.name}`, plan.valid ? '' : plan.reason, `[${game.ui.key('LMB')}] place`);
     if (canAct && input.mousePressed(0) && plan.valid) bm.placeFromPlan(plan);
   }
 
@@ -475,8 +478,9 @@ export class Combat {
     if (piece) {
       const name = piece.type === 'door' ? 'Wooden Door' : `${TIERS[piece.tier].name} ${PIECES[piece.type].name}`;
       const next = piece.type !== 'door' && piece.tier < TIERS.length - 1 ? TIERS[piece.tier + 1] : null;
-      const upCost = next ? `[RMB] upgrade to ${next.name}: ${costText(scaledCost(next.cost, PIECES[piece.type].mult))}` : '';
-      game.ui.buildInfo(`${name}  ${Math.ceil(piece.hp)}/${piece.maxHp} HP`, '', `[LMB] repair  ${upCost}  [X] demolish`);
+      const k = (n) => game.ui.key(n);
+      const upCost = next ? `[${k('RMB')}] upgrade to ${next.name}: ${costText(scaledCost(next.cost, PIECES[piece.type].mult))}` : '';
+      game.ui.buildInfo(`${name}  ${Math.ceil(piece.hp)}/${piece.maxHp} HP`, '', `[${k('LMB')}] repair  ${upCost}  [${k('X')}] demolish`);
     } else game.ui.buildInfo('Hammer', '', 'Aim at a building piece');
     if (this.swingT >= 0) {
       this.swingT += dt;
@@ -493,7 +497,7 @@ export class Combat {
     }
     if (input.pressed('KeyX')) {
       if (this.demolishArm > 0) { bm.demolish(piece); this.demolishArm = 0; }
-      else { this.demolishArm = 1.5; game.ui.message('Press X again to demolish'); }
+      else { this.demolishArm = 1.5; game.ui.message(`Press ${game.ui.key('X')} again to demolish`); }
     }
   }
 }
