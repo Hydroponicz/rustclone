@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rot &amp; Rust</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.min.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div id="crosshair"></div>
+    <div id="hitmarker"></div>
+    <div id="vignette"></div>
+    <div id="clock"></div>
+    <div id="objective"></div>
+    <div id="moodles"></div>
+    <div id="messages"></div>
+    <div id="pickups"></div>
+    <div id="prompt"></div>
+    <div id="buildinfo"></div>
+    <div id="progress"><div class="label"></div><div class="bar"><div class="fill"></div></div></div>
+    <div id="stats">
+      <div class="stat" id="st-health"><span class="lbl">HP</span><div class="bar"><div class="fill"></div></div><span class="val"></span></div>
+      <div class="stat" id="st-food"><span class="lbl">FOOD</span><div class="bar"><div class="fill"></div></div><span class="val"></span></div>
+      <div class="stat" id="st-water"><span class="lbl">WATER</span><div class="bar"><div class="fill"></div></div><span class="val"></span></div>
+      <div class="stat" id="st-stamina"><span class="lbl">STAM</span><div class="bar"><div class="fill"></div></div><span class="val"></span></div>
+    </div>
+    <div id="firemode"></div>
+    <div id="hotbar"></div>
+    <div id="craft-queue"></div>
+  </div>
+
+  <div id="inventory">
+    <div class="panel" id="inv-panel">
+      <h3>Inventory</h3>
+      <div id="inv-grid" class="grid"></div>
+      <h4>Belt</h4>
+      <div id="inv-hotbar" class="grid"></div>
+      <p class="hint">Drag to move · Shift+click quick-move · Ctrl+drag split · Right-click use / unload · Drag outside to drop</p>
+    </div>
+    <div class="panel" id="container-panel">
+      <h3 id="cont-title">Container</h3>
+      <div id="cont-grid" class="grid"></div>
+      <div class="cont-actions">
+        <button id="cont-takeall">Take all</button>
+        <button id="cont-toggle">Light</button>
+      </div>
+    </div>
+    <div class="panel" id="craft-panel">
+      <h3>Crafting</h3>
+      <div id="craft-tabs"></div>
+      <div id="craft-list"></div>
+      <p class="hint">Shift+click Craft to queue 5 · Click the queue (bottom right) to cancel</p>
+    </div>
+  </div>
+
+  <div id="drag-ghost" class="slot"></div>
+
+  <div id="menu" class="overlay">
+    <div class="menu-box">
+      <h1>ROT <span>&amp;</span> RUST</h1>
+      <p class="tag">Scavenge. Build. Hold the line against the dead.</p>
+      <div class="menu-buttons">
+        <button id="menu-resume">Resume</button>
+        <button id="menu-continue">Continue</button>
+        <button id="menu-new">New Game</button>
+        <button id="menu-save">Save Game</button>
+      </div>
+      <div class="menu-cols">
+        <div class="controls">
+          <h4>Controls</h4>
+          <table>
+            <tr><td>WASD / Shift / Ctrl·C / Space</td><td>Move / sprint / crouch / jump</td></tr>
+            <tr><td>Mouse · LMB · RMB</td><td>Look · attack/use/place · aim down sights</td></tr>
+            <tr><td>1–6 / wheel</td><td>Select belt slot</td></tr>
+            <tr><td>Tab or I</td><td>Inventory &amp; crafting</td></tr>
+            <tr><td>E</td><td>Interact / loot / open doors</td></tr>
+            <tr><td>R</td><td>Reload · cycle building piece</td></tr>
+            <tr><td>T</td><td>Check magazine</td></tr>
+            <tr><td>B</td><td>Fire mode (auto weapons)</td></tr>
+            <tr><td>F</td><td>Flashlight</td></tr>
+            <tr><td>Hammer: LMB / RMB / X×2</td><td>Repair / upgrade / demolish</td></tr>
+            <tr><td>Esc</td><td>Pause</td></tr>
+          </table>
+        </div>
+        <div class="settings">
+          <h4>Settings</h4>
+          <label>Mouse sensitivity <span id="set-sens-v"></span><input id="set-sens" type="range" min="0.2" max="3" step="0.05" /></label>
+          <label>Field of view <span id="set-fov-v"></span><input id="set-fov" type="range" min="60" max="100" step="1" /></label>
+          <label>Volume <span id="set-vol-v"></span><input id="set-vol" type="range" min="0" max="1" step="0.05" /></label>
+          <label>Max zombies <span id="set-zombies-v"></span><input id="set-zombies" type="range" min="10" max="120" step="5" /></label>
+          <h4>Survival tips</h4>
+          <ul>
+            <li>Gunshots carry far. Every zombie in earshot will come looking.</li>
+            <li>Crouching keeps you quiet and harder to spot. Your flashlight gives you away at night.</li>
+            <li>Raise your foundations: zombies can't climb, but they will bash through twig walls.</li>
+            <li>Headshots drop the dead. Leg shots leave them crawling.</li>
+            <li>Bites can infect you. There is no cure.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="death" class="overlay">
+    <div class="menu-box">
+      <h1 class="dead">YOU DIED</h1>
+      <p id="death-info"></p>
+      <div class="menu-buttons">
+        <button id="death-bag">Respawn at Sleeping Bag</button>
+        <button id="death-beach">Respawn on Beach</button>
+      </div>
+    </div>
+  </div>
+
+  <noscript>This game needs JavaScript and WebGL.</noscript>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
