@@ -664,6 +664,24 @@ export class World {
     }
   }
 
+  // Is something the player built (or placed) sitting on this node's spot?
+  nodeBlocked(node, margin = 1) {
+    const b = node.box;
+    for (const o of this.physics.query(b.minX - margin, b.minZ - margin, b.maxX + margin, b.maxZ + margin)) {
+      if ((o.kind === 'build' || o.kind === 'deploy') && o.maxY > b.minY - 1 && o.minY < b.maxY + 1) return true;
+    }
+    return false;
+  }
+
+  // Remove live nodes that overlap player structures (after loading a save, or after building).
+  clearNodesUnderBuildings(clock) {
+    let n = 0;
+    for (const node of this.nodes) {
+      if (node.alive && this.nodeBlocked(node)) { this.depleteNode(node, clock); n++; }
+    }
+    return n;
+  }
+
   depleteNode(node, clock) {
     this._showNode(node, false);
     node.respawnAt = clock + NODE_DEFS[node.type].respawn * randRange(Math.random, 0.8, 1.3);
@@ -675,7 +693,11 @@ export class World {
     const p = this.game.player.pos;
     for (let i = this._updIdx; i < this.nodes.length; i += 30) {
       const n = this.nodes[i];
-      if (!n.alive && clock > n.respawnAt && Math.hypot(n.x - p.x, n.z - p.z) > 30) this._showNode(n, true);
+      if (!n.alive && clock > n.respawnAt && Math.hypot(n.x - p.x, n.z - p.z) > 30) {
+        // Never regrow inside a base; try again later in case it gets torn down.
+        if (this.nodeBlocked(n)) n.respawnAt = clock + 120;
+        else this._showNode(n, true);
+      }
     }
     for (let i = this._updIdx; i < this.lootSpots.length; i += 30) this.lootSpots[i].update(this.game);
   }

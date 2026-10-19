@@ -64,7 +64,7 @@ In menus and the inventory, a cursor appears. The left stick moves it, the D-pad
 4. Loot the **town** (kitchen cabinets, fridges, wardrobes, car wrecks) and the **military checkpoint** (weapon crates) for guns, ammo and medical supplies. Break **barrels** for scrap.
 5. Use the **map** (M) to find the town, the checkpoint, your base and your backpack after a death. Survive the nights. Raise your foundations (zombies can't climb them), upgrade your walls, and keep a sleeping bag down as a respawn point. When you die, your backpack stays where you fell.
 
-The game autosaves every 60 seconds to `localStorage`. Use **Continue** on the title screen to resume.
+The game autosaves every 60 seconds to `localStorage`. Use **Continue** on the title screen to resume. Starting, continuing or resuming switches the browser to fullscreen (you can turn this off in Settings).
 
 ## Code layout
 

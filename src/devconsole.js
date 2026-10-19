@@ -471,8 +471,13 @@ export class DevConsole {
     this.cmd('freezetime', '[on|off]', 'Stop the day/night clock', cheat('freezeTime', 'Time frozen'));
     this.cmd('respawnnodes', '', 'Respawn all trees, rocks, barrels and hemp', () => {
       let n = 0;
-      for (const node of g.world.nodes) if (!node.alive) { g.world._showNode(node, true); n++; }
-      return `Respawned ${n} nodes.`;
+      let blocked = 0;
+      for (const node of g.world.nodes) {
+        if (node.alive) continue;
+        if (g.world.nodeBlocked(node)) blocked++;
+        else { g.world._showNode(node, true); n++; }
+      }
+      return `Respawned ${n} nodes${blocked ? ` (${blocked} skipped: under your buildings)` : ''}.`;
     });
     this.cmd('refillloot', '', 'Re-roll every loot container in the world', () => {
       for (const s of g.world.lootSpots) s.refill();

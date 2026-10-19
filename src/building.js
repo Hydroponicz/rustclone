@@ -560,6 +560,7 @@ export class BuildingManager {
       const d = new Deployable(this, plan.type, plan.x, plan.y, plan.z, plan.rot);
       this.deployables.push(d);
       if (plan.type === 'bag') this.spawnBag = d;
+      this.game.world.clearNodesUnderBuildings(this.game.clock);
       if (!this.game.cheats.freeBuild) inv.remove(d.def.item, 1);
       this.game.audio.play('build');
       return true;
@@ -570,6 +571,7 @@ export class BuildingManager {
       return false;
     }
     this.addPiece(plan, 0);
+    this.game.world.clearNodesUnderBuildings(this.game.clock);
     this.game.audio.play('build');
     this.game.makeNoise(plan.boxes[0][0], plan.boxes[0][2], 18);
     return true;

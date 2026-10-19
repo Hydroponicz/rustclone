@@ -121,7 +121,7 @@ class Game {
   constructor() {
     this.clock = 0;
     this.stats = { kills: 0 };
-    this.settings = { sensitivity: 1, fov: 75, volume: 0.6, maxZombies: 60, padSens: 1, invertY: false, padEnabled: true };
+    this.settings = { sensitivity: 1, fov: 75, volume: 0.6, maxZombies: 60, padSens: 1, invertY: false, padEnabled: true, fullscreen: true };
     try { Object.assign(this.settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch { /* ignore */ }
     this.objectivesDone = new Set();
     // Debug toggles driven by the dev console (` key).
@@ -196,15 +196,16 @@ class Game {
   // ------------------------------------------------------------------ setup / menus
   _bindUI() {
     const $ = (id) => document.getElementById(id);
-    $('menu-new').onclick = () => { this.newGame(); this.startPlaying(); };
-    $('menu-continue').onclick = () => { if (this.load()) this.startPlaying(); };
-    $('menu-resume').onclick = () => this.startPlaying();
+    // Fullscreen must be requested inside the click itself (a user gesture).
+    $('menu-new').onclick = () => { this.enterFullscreen(); this.newGame(); this.startPlaying(); };
+    $('menu-continue').onclick = () => { this.enterFullscreen(); if (this.load()) this.startPlaying(); };
+    $('menu-resume').onclick = () => { this.enterFullscreen(); this.startPlaying(); };
     $('menu-save').onclick = () => { this.save(); this.ui.message('Game saved.'); };
-    $('death-bag').onclick = () => this.respawn(true);
-    $('death-beach').onclick = () => this.respawn(false);
-    const sens = $('set-sens'), fov = $('set-fov'), vol = $('set-vol'), zc = $('set-zombies'), psens = $('set-padsens'), inv = $('set-invert'), pen = $('set-padenabled');
+    $('death-bag').onclick = () => { this.enterFullscreen(); this.respawn(true); };
+    $('death-beach').onclick = () => { this.enterFullscreen(); this.respawn(false); };
+    const sens = $('set-sens'), fov = $('set-fov'), vol = $('set-vol'), zc = $('set-zombies'), psens = $('set-padsens'), inv = $('set-invert'), pen = $('set-padenabled'), fs = $('set-fullscreen');
     sens.value = this.settings.sensitivity; fov.value = this.settings.fov; vol.value = this.settings.volume; zc.value = this.settings.maxZombies;
-    psens.value = this.settings.padSens; inv.checked = !!this.settings.invertY; pen.checked = this.settings.padEnabled !== false;
+    psens.value = this.settings.padSens; inv.checked = !!this.settings.invertY; pen.checked = this.settings.padEnabled !== false; fs.checked = this.settings.fullscreen !== false;
     const apply = () => {
       this.settings.sensitivity = Number(sens.value);
       this.settings.fov = Number(fov.value);
@@ -213,6 +214,7 @@ class Game {
       this.settings.padSens = Number(psens.value);
       this.settings.invertY = inv.checked;
       this.settings.padEnabled = pen.checked;
+      this.settings.fullscreen = fs.checked;
       this.input.pad.enabled = pen.checked;
       if (!pen.checked) this.input.lastDevice = 'kbm';
       $('set-padsens-v').textContent = this.settings.padSens.toFixed(2);
@@ -224,8 +226,8 @@ class Game {
       $('set-zombies-v').textContent = this.settings.maxZombies;
       try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(this.settings)); } catch { /* ignore */ }
     };
-    [sens, fov, vol, zc, psens, inv, pen].forEach((e) => (e.oninput = apply));
-    inv.onchange = pen.onchange = apply;
+    [sens, fov, vol, zc, psens, inv, pen, fs].forEach((e) => (e.oninput = apply));
+    inv.onchange = pen.onchange = fs.onchange = apply;
     apply();
     // Any key (other than Esc) or click recaptures the mouse when it was left free.
     window.addEventListener('keydown', (e) => {
@@ -234,6 +236,17 @@ class Game {
     document.getElementById('game').addEventListener('click', () => {
       if (this.started && !this.ui.inventoryOpen && this.player.alive && !this.dev.open) this.lock();
     });
+  }
+
+  enterFullscreen() {
+    if (this.settings.fullscreen === false || document.fullscreenElement || this.debugLock) return;
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!req) return;
+    try {
+      const p = req.call(el, { navigationUI: 'hide' });
+      if (p && p.catch) p.catch(() => {});
+    } catch { /* not allowed here (e.g. no user gesture) */ }
   }
 
   lock() {
@@ -625,6 +638,7 @@ class Game {
     this.crafting.clear();
     this.clock = data.clock || 0;
     this.building.load(data.building);
+    this.world.clearNodesUnderBuildings(this.clock);
     const p = this.player;
     p.reset();
     Object.assign(p, { yaw: data.player.yaw, pitch: data.player.pitch, health: data.player.health, food: data.player.food, water: data.player.water, stamina: data.player.stamina, bleeding: data.player.bleeding, infection: data.player.infection || 0 });
