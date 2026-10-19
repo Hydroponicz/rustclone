@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { ITEMS, RECIPES } from './items.js';
 import { fmtTime } from './util.js';
 
-// Developer console: press ` (backquote) or F8. Type `help` for commands.
-// Also provides a live stats overlay and debug visualisations.
+// Developer debug panel: press ` (backquote) or F8 (controller: L3+R3). Checkboxes, sliders and
+// buttons for cheats, spawning, time and debug views, plus a command line (type `help`).
 
 const HISTORY_KEY = 'rotrust_console_history';
 const STATE_COLORS = { idle: 0x8a8a8a, wander: 0x6a9fd9, investigate: 0xe0c040, chase: 0xff3a2a, bash: 0xff8a1a };
@@ -33,26 +33,37 @@ export class DevConsole {
     this.debug = new DebugDraw(game);
     this._buildDom();
     this._registerCommands();
+    this._buildGui();
     this._captureErrors();
-    this.log('Dev console ready. Type "help" for commands, Tab to autocomplete, ↑/↓ for history.', 'info');
+    this.log('Command line: type "help" for commands, Tab to autocomplete, ↑/↓ for history.', 'info');
   }
 
   // ------------------------------------------------------------------ DOM
   _buildDom() {
     const root = document.createElement('div');
     root.id = 'devconsole';
-    root.innerHTML = '<div id="dc-log"></div><div id="dc-row"><span>&gt;</span><input id="dc-input" spellcheck="false" autocomplete="off" /></div><div id="dc-suggest"></div>';
+    root.innerHTML = `
+      <div id="dp-head"><b>Debug panel</b><span class="dp-keys">\` / F8 · pad L3+R3</span><button id="dp-close" title="Close">✕</button></div>
+      <div id="dp-body"></div>`;
     document.body.appendChild(root);
     this.root = root;
-    this.logEl = root.querySelector('#dc-log');
-    this.inputEl = root.querySelector('#dc-input');
-    this.suggestEl = root.querySelector('#dc-suggest');
+    this.body = root.querySelector('#dp-body');
+    root.querySelector('#dp-close').onclick = () => this.toggle(false);
     this.statsEl = document.createElement('div');
     this.statsEl.id = 'devstats';
     document.body.appendChild(this.statsEl);
     this.badge = document.createElement('div');
     this.badge.id = 'dc-badge';
     document.body.appendChild(this.badge);
+    this.syncers = [];
+
+    // Command line lives in its own (collapsed) section at the bottom of the panel.
+    const cl = this._section('Command line', false, 'dp-console');
+    cl.innerHTML = '<div id="dc-log"></div><div id="dc-row"><span>&gt;</span><input id="dc-input" spellcheck="false" autocomplete="off" placeholder="type help…" /></div><div id="dc-suggest"></div>';
+    this.consoleSection = cl.parentElement;
+    this.logEl = cl.querySelector('#dc-log');
+    this.inputEl = cl.querySelector('#dc-input');
+    this.suggestEl = cl.querySelector('#dc-suggest');
 
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Backquote' || e.code === 'F8') {
@@ -62,11 +73,14 @@ export class DevConsole {
       } else if (e.code === 'F3') {
         e.preventDefault();
         this._run('stats');
+      } else if (this.open && e.code === 'Escape' && document.activeElement !== this.inputEl) {
+        this.toggle(false);
       }
     }, true);
     // Keep typing out of the game's key handlers.
+    root.addEventListener('keydown', (e) => { if (e.code !== 'Backquote' && e.code !== 'F8') e.stopPropagation(); });
+    root.addEventListener('keyup', (e) => e.stopPropagation());
     this.inputEl.addEventListener('keydown', (e) => {
-      e.stopPropagation();
       if (e.code === 'Backquote' || e.code === 'F8') return;
       if (e.key === 'Enter') {
         const text = this.inputEl.value.trim();
@@ -85,9 +99,166 @@ export class DevConsole {
         this._complete();
       }
     });
-    this.inputEl.addEventListener('keyup', (e) => e.stopPropagation());
     this.inputEl.addEventListener('input', () => this._suggest(this.inputEl.value));
     root.addEventListener('mousedown', (e) => e.stopPropagation());
+    root.addEventListener('wheel', (e) => e.stopPropagation(), { passive: true });
+  }
+
+  // ------------------------------------------------------------------ GUI widgets
+  _section(title, open = true, id = '') {
+    const d = document.createElement('details');
+    d.className = 'dp-sec';
+    if (id) d.id = id;
+    d.open = open;
+    d.innerHTML = `<summary>${title}</summary><div class="dp-sec-body"></div>`;
+    // Keep the command line pinned last.
+    if (this.consoleSection) this.body.insertBefore(d, this.consoleSection);
+    else this.body.appendChild(d);
+    return d.querySelector('.dp-sec-body');
+  }
+
+  _el(parent, html, cls = '') {
+    const e = document.createElement('div');
+    if (cls) e.className = cls;
+    e.innerHTML = html;
+    parent.appendChild(e);
+    return e;
+  }
+
+  _toggle(parent, label, get, set, hint = '') {
+    const row = this._el(parent, `<label class="dp-check"><input type="checkbox" /> <span>${label}</span>${hint ? `<small>${hint}</small>` : ''}</label>`);
+    const cb = row.querySelector('input');
+    const apply = () => set(cb.checked);
+    cb.addEventListener('change', apply);
+    cb.addEventListener('input', apply);
+    this.syncers.push(() => { cb.checked = !!get(); });
+    return cb;
+  }
+
+  _slider(parent, label, min, max, step, get, set, fmt = (v) => v) {
+    const row = this._el(parent, `<label class="dp-slider"><span>${label}</span><b></b><input type="range" min="${min}" max="${max}" step="${step}" /></label>`);
+    const r = row.querySelector('input'), out = row.querySelector('b');
+    let dragging = false;
+    r.addEventListener('pointerdown', () => { dragging = true; });
+    window.addEventListener('pointerup', () => { dragging = false; });
+    r.addEventListener('input', () => { set(Number(r.value)); out.textContent = fmt(Number(r.value)); });
+    this.syncers.push(() => {
+      if (dragging || document.activeElement === r) return;
+      const v = get();
+      r.value = String(v);
+      out.textContent = fmt(Number(v));
+    });
+    return r;
+  }
+
+  _buttons(parent, list) {
+    const row = this._el(parent, '', 'dp-btns');
+    for (const [label, fn, cls] of list) {
+      const b = document.createElement('button');
+      b.textContent = label;
+      if (cls) b.className = cls;
+      b.onclick = () => { fn(); this._sync(); };
+      row.appendChild(b);
+    }
+    return row;
+  }
+
+  _readout(parent, fn, cls = 'dp-readout') {
+    const e = this._el(parent, '', cls);
+    this.syncers.push(() => { e.textContent = fn(); });
+    return e;
+  }
+
+  _sync() {
+    for (const s of this.syncers) s();
+  }
+
+  _buildGui() {
+    const g = this.game, c = g.cheats, p = () => g.player, dbg = this.debug;
+    const run = (cmd) => () => this._run(cmd);
+    const pct = (v) => `${Math.round(v)}`;
+
+    // --- live info
+    let s = this._section('Live info');
+    this._readout(s, () => this.statsText(), 'dp-stats');
+    this._toggle(s, 'Show stats overlay in game', () => this.statsOn, (v) => this._run(`stats ${v ? 'on' : 'off'}`), 'F3');
+    this.lookOut = this._el(s, 'Look result appears here.', 'dp-readout dp-small');
+    this._buttons(s, [['Inspect crosshair target', () => { this.lookOut.textContent = this.commands.get('look').run([]); }]]);
+
+    // --- player
+    s = this._section('Player');
+    this._toggle(s, 'God mode', () => c.god, (v) => { c.god = v; }, 'no damage, bleeding or hunger');
+    this._toggle(s, 'Noclip / fly', () => c.noclip, (v) => { c.noclip = v; }, 'WASD, Space up, Ctrl down, Shift fast');
+    this._toggle(s, 'Infinite ammo', () => c.infiniteAmmo, (v) => { c.infiniteAmmo = v; });
+    this._slider(s, 'Move speed', 0.25, 5, 0.25, () => c.speed, (v) => { c.speed = v; }, (v) => `×${v}`);
+    this._slider(s, 'Health', 1, 100, 1, () => p().health, (v) => { p().health = v; }, pct);
+    this._slider(s, 'Food', 0, 100, 1, () => p().food, (v) => { p().food = v; }, pct);
+    this._slider(s, 'Water', 0, 100, 1, () => p().water, (v) => { p().water = v; }, pct);
+    this._slider(s, 'Stamina', 0, 100, 1, () => p().stamina, (v) => { p().stamina = v; }, pct);
+    this._slider(s, 'Infection', 0, 100, 1, () => p().infection * 100, (v) => { p().infection = v / 100; }, (v) => (v > 0 ? `${Math.round(v)}%` : 'none'));
+    this._toggle(s, 'Bleeding', () => p().bleeding, (v) => { p().bleeding = v; });
+    this._buttons(s, [['Heal fully', run('heal')], ['Cure infection', run('cure')], ['Clear inventory', run('clearinv'), 'warn'], ['Kill me', run('kill'), 'danger']]);
+
+    // --- teleport
+    s = this._section('Teleport', false);
+    this._buttons(s, [['Town', run('tp town')], ['Military', run('tp military')], ['Beach', run('tp beach')], ['Sleeping bag', run('tp bag')], ['My base', run('tp base')]]);
+    const tp = this._el(s, '<input type="number" placeholder="x" step="1" /> <input type="number" placeholder="z" step="1" /> <button>Go</button>', 'dp-inline');
+    const [tx, tz] = tp.querySelectorAll('input');
+    tp.querySelector('button').onclick = () => this._run(`tp ${Number(tx.value) || 0} ${Number(tz.value) || 0}`);
+    this._readout(s, () => { const q = p().pos; return `You are at x ${q.x.toFixed(1)}, z ${q.z.toFixed(1)} (${this.zoneName()})`; }, 'dp-readout dp-small');
+
+    // --- items
+    s = this._section('Items', false);
+    const giver = this._el(s, `<select></select><input type="number" min="1" value="1" /><button>Give</button>`, 'dp-inline');
+    const sel = giver.querySelector('select'), qty = giver.querySelector('input');
+    const groups = { Resources: [], Weapons: [], Tools: [], Ammo: [], Medical: [], Food: [], Deployables: [] };
+    for (const [id, def] of Object.entries(ITEMS)) {
+      const grp = def.gun ? 'Weapons' : def.deploy ? 'Deployables' : id.startsWith('ammo') ? 'Ammo' : def.use && (def.use.heal || def.use.stopBleed) ? 'Medical' : def.use ? 'Food' : def.melee || def.tool || id === 'flashlight' ? 'Tools' : 'Resources';
+      groups[grp].push(`<option value="${id}">${def.icon} ${def.name}</option>`);
+    }
+    sel.innerHTML = Object.entries(groups).map(([k, v]) => `<optgroup label="${k}">${v.join('')}</optgroup>`).join('');
+    giver.querySelector('button').onclick = () => this._run(`give ${sel.value} ${Math.max(1, Number(qty.value) || 1)}`);
+    this._el(s, 'Kits', 'dp-label');
+    this._buttons(s, Object.keys(KITS).map((k) => [k[0].toUpperCase() + k.slice(1), run(`kit ${k}`)]));
+    this._el(s, 'Quick resources (×1000)', 'dp-label');
+    this._buttons(s, ['wood', 'stone', 'metal_frags', 'scrap', 'cloth', 'gunpowder'].map((id) => [`${ITEMS[id].icon} ${ITEMS[id].name}`, run(`give ${id} 1000`)]));
+    this._toggle(s, 'Free building & crafting', () => c.freeBuild, (v) => { c.freeBuild = v; }, 'no resource cost');
+    this._toggle(s, 'Instant crafting', () => c.instaCraft, (v) => { c.instaCraft = v; });
+
+    // --- world & time
+    s = this._section('World & time', false);
+    this._slider(s, 'Time of day', 0, 23.99, 0.25, () => g.env.hours, (v) => { g.env.hours = v; }, (v) => fmtTime(v));
+    this._buttons(s, [['Dawn', run('time 5.5')], ['Noon', run('time 12')], ['Dusk', run('time 20')], ['Night', run('time 23')], ['Horde time', run('time 21.95')]]);
+    this._slider(s, 'Day', 1, 30, 1, () => g.env.day, (v) => { g.env.day = v; }, (v) => `day ${v}`);
+    this._slider(s, 'Game speed', 0.1, 10, 0.1, () => c.timeScale, (v) => { c.timeScale = v; }, (v) => `×${Number(v).toFixed(1)}`);
+    this._toggle(s, 'Freeze clock', () => c.freezeTime, (v) => { c.freezeTime = v; });
+    this._buttons(s, [['Respawn trees & rocks', run('respawnnodes')], ['Refill all loot', run('refillloot')]]);
+    this._buttons(s, [['Save', run('save')], ['Load', run('load')], ['Delete save', () => { if (window.confirm('Delete the saved game?')) this._run('wipesave'); }, 'danger']]);
+
+    // --- zombies
+    s = this._section('Zombies', false);
+    this._toggle(s, "Zombies ignore me", () => c.noTarget, (v) => { c.noTarget = v; }, "can't see or hear you");
+    this._toggle(s, 'Freeze all zombies', () => c.freezeAI, (v) => { c.freezeAI = v; });
+    this._toggle(s, 'Disable natural spawns & hordes', () => c.noSpawn, (v) => { c.noSpawn = v; });
+    this._toggle(s, 'Show zombies on map', () => g.map.showZombies, (v) => { g.map.showZombies = v; });
+    this._slider(s, 'Max zombies', 0, 120, 5, () => g.settings.maxZombies, (v) => { g.settings.maxZombies = v; }, (v) => v);
+    let spawnN = 5, spawnD = 12, hordeN = 15;
+    this._slider(s, 'Spawn count', 1, 40, 1, () => spawnN, (v) => { spawnN = v; });
+    this._slider(s, 'Spawn distance', 3, 60, 1, () => spawnD, (v) => { spawnD = v; }, (v) => `${v} m`);
+    this._slider(s, 'Horde size', 5, 80, 5, () => hordeN, (v) => { hordeN = v; });
+    this._buttons(s, [['Spawn in front', () => this._run(`spawn ${spawnN} ${spawnD}`)], ['Send horde', () => this._run(`horde ${hordeN}`)], ['Make noise (60 m)', run('noise 60')]]);
+    this._buttons(s, [['Kill all', run('killall'), 'warn'], ['Remove all + corpses', run('clearzombies'), 'warn']]);
+    this._readout(s, () => this.commands.get('zombies').run(['8']), 'dp-readout dp-small dp-pre');
+
+    // --- debug views
+    s = this._section('Debug views', false);
+    const view = (label, key, hint) => this._toggle(s, label, () => dbg[key], (v) => { dbg[key] = v; if (!v) dbg.clear(key); }, hint);
+    view('Physics colliders', 'colliders', 'grey static · green nodes · yellow loot · blue base · pink deployables');
+    view('Zombie hitboxes', 'hitboxes', 'red head · orange thorax · yellow stomach · blue legs');
+    view('Zombie AI state & targets', 'ai', 'grey idle · blue wander · yellow investigate · red chase · orange bash');
+    view('Noise rings', 'noise', 'green quiet · yellow loud · red gunshots');
+    view('Bullet paths', 'bullets');
+    this._buttons(s, [['All on', run('debugall on')], ['All off', run('debugall off')]]);
   }
 
   toggle(force) {
@@ -95,12 +266,13 @@ export class DevConsole {
     this.root.style.display = this.open ? 'flex' : 'none';
     if (this.open) {
       if (document.pointerLockElement) document.exitPointerLock();
+      if (this.errorCount) this.consoleSection.open = true; // show new errors
       this.errorCount = 0;
       this._renderBadge();
-      setTimeout(() => this.inputEl.focus(), 0);
+      this._sync();
       this.logEl.scrollTop = this.logEl.scrollHeight;
     } else {
-      this.inputEl.blur();
+      if (this.root.contains(document.activeElement)) document.activeElement.blur();
       const g = this.game;
       if (g.running && !g.ui.inventoryOpen && g.player.alive && !g.input.padActive) g.lock();
     }
@@ -430,6 +602,11 @@ export class DevConsole {
     if (this.statsOn && this._statsT <= 0) {
       this._statsT = 0.25;
       this.statsEl.textContent = this.statsText();
+    }
+    this._guiT = (this._guiT || 0) - dt;
+    if (this.open && this._guiT <= 0) {
+      this._guiT = 0.25;
+      this._sync();
     }
     this.debug.update(dt);
   }

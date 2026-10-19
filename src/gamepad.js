@@ -129,6 +129,7 @@ export class PadGameplay {
   apply(dt) {
     const game = this.game, input = game.input, pad = input.pad;
     if (!pad.connected) return;
+    if (devCombo(pad)) { game.dev.toggle(true); return; }
     const key = (code) => input.padKeys.add(code);
     const tap = (code) => { input.justPressed.add(code); input.padKeys.add(code); };
 
@@ -205,7 +206,12 @@ export class PadGameplay {
   }
 }
 
-const FOCUSABLE = 'button, .slot[data-c], .cq[data-k], input[type=range], input[type=checkbox]';
+const FOCUSABLE = 'button, summary, .slot[data-c], .cq[data-k], input[type=range], input[type=checkbox]';
+
+// Clicking both sticks toggles the debug panel.
+function devCombo(pad) {
+  return pad.down(PAD.L3) && pad.down(PAD.R3) && (pad.pressed(PAD.L3) || pad.pressed(PAD.R3));
+}
 
 // Virtual cursor for menus, the inventory and crafting.
 export class PadCursor {
@@ -224,6 +230,7 @@ export class PadCursor {
   // Which overlay currently owns the screen, if any.
   currentRoot() {
     const vis = (id) => document.getElementById(id).style.display === 'flex';
+    if (this.game.dev.open) return this.game.dev.root;
     if (vis('death')) return document.getElementById('death');
     if (vis('menu')) return document.getElementById('menu');
     if (this.game.ui.inventoryOpen) return document.getElementById('inventory');
@@ -290,6 +297,7 @@ export class PadCursor {
 
   update(dt) {
     const game = this.game, ui = game.ui, pad = game.input.pad;
+    if (pad.connected && devCombo(pad)) { game.dev.toggle(); return; }
     const root = this.currentRoot();
     if (!root || !pad.connected || game.input.lastDevice !== 'pad') {
       if (!root) this.root = null;
@@ -363,7 +371,9 @@ export class PadCursor {
     if (root.id === 'inventory' && (pad.pressed(PAD.LB) || pad.pressed(PAD.RB))) ui.cycleCraftTab(pad.pressed(PAD.RB) ? 1 : -1);
 
     const back = pad.pressed(PAD.B);
-    if (root.id === 'inventory') {
+    if (root.id === 'devconsole') {
+      if (back) game.dev.toggle(false);
+    } else if (root.id === 'inventory') {
       if (back && ui.drag) ui._endDrag();
       else if (back || (pad.pressed(PAD.Y) && !slotItem) || pad.pressed(PAD.BACK)) ui.closeInventory();
     } else if (root.id === 'menu') {
