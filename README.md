@@ -64,6 +64,20 @@ In menus and the inventory, a cursor appears. The left stick moves it, the D-pad
 4. Loot the **town** (kitchen cabinets, fridges, wardrobes, car wrecks) and the **military checkpoint** (weapon crates) for guns, ammo and medical supplies. Break **barrels** for scrap.
 5. Use the **map** (M) to find the town, the checkpoint, your base and your backpack after a death. Survive the nights. Raise your foundations (zombies can't climb them), upgrade your walls, and keep a sleeping bag down as a respawn point. When you die, your backpack stays where you fell.
 
+### Food and saturation
+
+Eating heals you over time on top of restoring hunger, and bigger meals heal more:
+
+| Food | Hunger | Thirst | Heals over time | Where |
+| --- | --- | --- | --- | --- |
+| Soda Can | +5 | +25 | 4 HP / 10 s | houses |
+| Crisps | +15 | −5 | 8 HP / 15 s | houses, zombies |
+| Can of Beans | +35 | +5 | 20 HP / 30 s | houses, zombies |
+| Canned Stew | +45 | +10 | 30 HP / 40 s | house kitchens |
+| Army Ration (MRE) | +65 | +10 | 45 HP / 50 s | military crates |
+
+Meals stack, so eating two heals faster, up to 60 HP stored. Stored healing waits while you're at full health. While it's active you get a **Well fed** status and a light green segment on the health bar showing the healing still to come. Hover a food item in your inventory to see its numbers.
+
 The game autosaves every 60 seconds to `localStorage`. Use **Continue** on the title screen to resume. Starting, continuing or resuming switches the browser to fullscreen (you can turn this off in Settings).
 
 ## Code layout

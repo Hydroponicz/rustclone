@@ -14,7 +14,7 @@ const KITS = {
   builder: { building_plan: 1, hammer: 1, wood: 5000, stone: 5000, metal_frags: 3000, door_wood: 5, storage_box: 3, furnace: 2, campfire: 2, sleeping_bag: 2 },
   guns: { pistol: 1, shotgun: 1, rifle: 1, bolt: 1, ammo_9mm: 120, ammo_12g: 60, ammo_762: 240, medkit: 3, bandage: 10 },
   smelt: { furnace: 1, wood: 1000, metal_ore: 1000, sulfur_ore: 1000 },
-  survival: { beans: 10, water: 10, medkit: 3, bandage: 10, flashlight: 1 },
+  survival: { beans: 10, stew: 5, mre: 3, water: 10, medkit: 3, bandage: 10, flashlight: 1 },
 };
 
 export class DevConsole {
@@ -586,7 +586,7 @@ export class DevConsole {
       `draw calls ${info.render.calls}  triangles ${(info.render.triangles / 1000).toFixed(0)}k  geometries ${info.memory.geometries}  textures ${info.memory.textures}`,
       `pos ${p.pos.x.toFixed(1)}, ${p.pos.y.toFixed(1)}, ${p.pos.z.toFixed(1)}  zone ${this.zoneName()}  speed ${p.speedNow.toFixed(1)} m/s${p.onGround ? '' : ' (air)'}${p.swimming ? ' (swim)' : ''}`,
       `Day ${g.env.day} ${fmtTime(g.env.hours)}${g.env.isNight ? ' NIGHT' : ''}  timescale ×${g.cheats.timeScale}`,
-      `HP ${p.health.toFixed(0)}  food ${p.food.toFixed(0)}  water ${p.water.toFixed(0)}  stam ${p.stamina.toFixed(0)}${p.bleeding ? '  BLEEDING' : ''}${p.infection > 0 ? `  infection ${(p.infection * 100).toFixed(0)}%` : ''}`,
+      `HP ${p.health.toFixed(0)}${p.saturationHP > 0.5 ? ` (+${p.saturationHP.toFixed(0)} saturation)` : ''}  food ${p.food.toFixed(0)}  water ${p.water.toFixed(0)}  stam ${p.stamina.toFixed(0)}${p.bleeding ? '  BLEEDING' : ''}${p.infection > 0 ? `  infection ${(p.infection * 100).toFixed(0)}%` : ''}`,
       `zombies ${alive.length}/${g.zombies.targetCount()} target  ${Object.entries(by).map(([k, v]) => `${k} ${v}`).join('  ')}  corpses ${z.length - alive.length}  nearest ${isFinite(nearest) ? nearest.toFixed(0) + ' m' : '—'}  kills ${g.stats.kills}`,
       `build pieces ${g.building.pieces.length} (twig ${tiers[0]} wood ${tiers[1]} stone ${tiers[2]} metal ${tiers[3]})  deployables ${g.building.deployables.length}  bags ${g.bags.length}`,
       `bullets ${g.combat.bullets.length}  craft queue ${g.crafting.queue.length}  held ${g.combat.def ? g.combat.def.name : 'hands'}${g.combat.item && g.combat.item.mag !== undefined ? ` (mag ${g.combat.item.mag})` : ''}`,

@@ -281,3 +281,8 @@ body.pad .kbm-only { display: none; }
 #map-info b { color: var(--accent); }
 #map-info .map-hint { color: var(--dim); }
 #map-info .map-dev { color: #ff8a7a; }
+
+/* saturation: healing still to come from food */
+.stat .bar { position: relative; }
+#st-health .pending { position: absolute; top: 0; bottom: 0; background: rgba(140, 220, 120, 0.55); transition: width 0.15s, left 0.15s; }
+.moodle.good { border-color: var(--ok); color: #cfeec4; }

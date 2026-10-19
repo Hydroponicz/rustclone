@@ -13,13 +13,15 @@ export const ITEMS = {
   scrap: { name: 'Scrap', icon: '⚙️', stack: 1000 },
   cloth: { name: 'Cloth', icon: '🧵', stack: 500 },
 
-  // Consumables
+  // Consumables. `regen: [hp, seconds]` is saturation: healing over time after eating.
   bandage: { name: 'Bandage', icon: '🩹', stack: 10, use: { heal: 8, stopBleed: true, time: 2.2 } },
   medkit: { name: 'Medkit', icon: '💊', stack: 3, use: { heal: 55, stopBleed: true, time: 5 } },
-  beans: { name: 'Can of Beans', icon: '🥫', stack: 10, use: { food: 35, water: 5, time: 2.5 } },
-  crisps: { name: 'Crisps', icon: '🍟', stack: 10, use: { food: 15, water: -5, time: 1.5 } },
+  soda: { name: 'Soda Can', icon: '🥤', stack: 10, use: { water: 25, food: 5, time: 1.5, regen: [4, 10] } },
+  crisps: { name: 'Crisps', icon: '🍟', stack: 10, use: { food: 15, water: -5, time: 1.5, regen: [8, 15] } },
+  beans: { name: 'Can of Beans', icon: '🥫', stack: 10, use: { food: 35, water: 5, time: 2.5, regen: [20, 30] } },
+  stew: { name: 'Canned Stew', icon: '🍲', stack: 5, use: { food: 45, water: 10, time: 3, regen: [30, 40] } },
+  mre: { name: 'Army Ration (MRE)', icon: '🍱', stack: 5, use: { food: 65, water: 10, time: 4, regen: [45, 50] } },
   water: { name: 'Water Bottle', icon: '💧', stack: 10, use: { water: 45, time: 2 } },
-  soda: { name: 'Soda Can', icon: '🥤', stack: 10, use: { water: 25, food: 5, time: 1.5 } },
 
   // Tools & melee
   rock: { name: 'Rock', icon: '🪨', stack: 1, melee: { dmg: 10, range: 2.2, rate: 0.85, stamina: 5 }, gather: { tree: 4, stone: 6, barrel: 1 } },
@@ -97,6 +99,7 @@ export const LOOT = {
       { id: 'beans', min: 1, max: 2, w: 10 }, { id: 'crisps', min: 1, max: 2, w: 8 },
       { id: 'water', min: 1, max: 2, w: 10 }, { id: 'soda', min: 1, max: 2, w: 7 },
       { id: 'cloth', min: 3, max: 8, w: 5 }, { id: 'scrap', min: 1, max: 4, w: 4 },
+      { id: 'stew', min: 1, max: 1, w: 4 },
     ],
   },
   closet: {
@@ -126,6 +129,7 @@ export const LOOT = {
       { id: 'shotgun', min: 1, max: 1, w: 2.5 }, { id: 'pistol', min: 1, max: 1, w: 3 },
       { id: 'bolt', min: 1, max: 1, w: 1.5 }, { id: 'metal_frags', min: 30, max: 80, w: 4 },
       { id: 'gunpowder', min: 20, max: 40, w: 4 }, { id: 'scrap', min: 10, max: 25, w: 5 },
+      { id: 'mre', min: 1, max: 2, w: 5 },
     ],
   },
   zombie: {

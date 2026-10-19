@@ -6,6 +6,7 @@ import { DAY_LENGTH } from './env.js';
 const STAND = { height: 1.8, eye: 1.62 };
 const CROUCH = { height: 1.15, eye: 1.02 };
 const RADIUS = 0.33;
+const SATURATION_CAP = 60;
 
 export class Player {
   constructor(game) {
@@ -33,6 +34,7 @@ export class Player {
     this.stamina = 100;
     this.bleeding = false;
     this.infection = 0; // 0 = healthy, >0 infected (progresses to 1 = death)
+    this.saturation = []; // healing-over-time from food: [{ rate (hp/s), left (hp) }]
     this.alive = true;
     this.vx = this.vz = this.vy = 0;
     this.lastHurt = -10;
@@ -211,7 +213,37 @@ export class Player {
     this.eyeH = STAND.eye;
   }
 
+  // Food heals gradually. Several meals stack (heal faster); the pool is capped.
+  addSaturation(hp, seconds) {
+    this.saturation.push({ rate: hp / seconds, left: hp });
+    let over = this.saturationHP - SATURATION_CAP;
+    for (let i = 0; i < this.saturation.length && over > 0; i++) {
+      const cut = Math.min(over, this.saturation[i].left);
+      this.saturation[i].left -= cut;
+      over -= cut;
+    }
+    this.saturation = this.saturation.filter((e) => e.left > 0.01);
+  }
+
+  get saturationHP() {
+    return this.saturation.reduce((n, e) => n + e.left, 0);
+  }
+
+  _tickSaturation(dt) {
+    // Stored healing waits while you're at full health.
+    if (!this.saturation.length || this.health >= 100) return;
+    let heal = 0;
+    for (const e of this.saturation) {
+      const h = Math.min(e.left, e.rate * dt);
+      e.left -= h;
+      heal += h;
+    }
+    this.saturation = this.saturation.filter((e) => e.left > 0.01);
+    this.health = Math.min(100, this.health + heal);
+  }
+
   updateStats(dt) {
+    this._tickSaturation(dt);
     if (this.game.cheats.god) {
       this.food = this.water = this.stamina = 100;
       return;

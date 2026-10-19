@@ -7,6 +7,19 @@ const $ = (id) => document.getElementById(id);
 const KEY_LABELS = { LMB: 'LMB', RMB: 'RMB', E: 'E', R: 'R', T: 'T', B: 'B', F: 'F', X: 'X', Tab: 'Tab' };
 const PAD_LABELS = { LMB: 'RT', RMB: 'LT', E: 'Ⓧ', R: 'D-pad →', T: 'D-pad ↓', B: 'R3', F: 'D-pad ↑', X: 'D-pad ←', Tab: 'Ⓨ' };
 
+function itemTooltip(id) {
+  const def = ITEMS[id];
+  const u = def.use;
+  if (!u) return def.name;
+  const bits = [];
+  if (u.food) bits.push(`${u.food > 0 ? '+' : ''}${u.food} food`);
+  if (u.water) bits.push(`${u.water > 0 ? '+' : ''}${u.water} water`);
+  if (u.heal) bits.push(`+${u.heal} health`);
+  if (u.regen) bits.push(`heals ${u.regen[0]} HP over ${u.regen[1]}s`);
+  if (u.stopBleed) bits.push('stops bleeding');
+  return `${def.name}\n${bits.join(', ')}`;
+}
+
 function el(tag, cls, html) {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -146,11 +159,17 @@ export class UI {
     const g = this.game, p = g.player;
     const bar = (id, v) => { $(id).querySelector('.fill').style.width = `${Math.max(0, Math.min(100, v))}%`; $(id).querySelector('.val').textContent = Math.ceil(v); };
     bar('st-health', p.health);
+    // Healing still to come from food, drawn as a lighter segment after the health bar.
+    const pend = $('st-health').querySelector('.pending');
+    pend.style.left = `${Math.min(100, p.health)}%`;
+    pend.style.width = `${Math.max(0, Math.min(100 - p.health, p.saturationHP))}%`;
     bar('st-food', p.food);
     bar('st-water', p.water);
     bar('st-stamina', p.stamina);
     $('clock').textContent = `Day ${g.env.day} · ${fmtTime(g.env.hours)}${g.env.isNight ? ' · NIGHT' : ''}`;
     const mood = [];
+    const sat = p.saturationHP;
+    if (sat > 0.5) mood.push(['🍲', `Well fed (+${Math.ceil(sat)} HP)`, 'good']);
     if (p.health < 20) mood.push(['❤', 'Critical', 'bad']);
     else if (p.health < 50) mood.push(['❤', 'Injured', 'warn']);
     if (p.bleeding) mood.push(['🩸', 'Bleeding', 'bad']);
@@ -198,7 +217,7 @@ export class UI {
     const inv = this.game.inventory;
     for (let i = 0; i < 30; i++) {
       this.invSlotEls[i].innerHTML = this._slotHTML(inv.slots[i]);
-      this.invSlotEls[i].title = inv.slots[i] ? ITEMS[inv.slots[i].id].name : '';
+      this.invSlotEls[i].title = inv.slots[i] ? itemTooltip(inv.slots[i].id) : '';
     }
     if (this.openC) {
       const c = this.openC;
@@ -213,7 +232,7 @@ export class UI {
       }
       for (let i = 0; i < c.slots.length; i++) {
         this.contGrid.children[i].innerHTML = this._slotHTML(c.slots[i]);
-        this.contGrid.children[i].title = c.slots[i] ? ITEMS[c.slots[i].id].name : '';
+        this.contGrid.children[i].title = c.slots[i] ? itemTooltip(c.slots[i].id) : '';
       }
       const t = this.openTarget;
       this.contToggle.style.display = t && t.canToggle ? 'inline-block' : 'none';

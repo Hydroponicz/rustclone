@@ -378,6 +378,7 @@ class Game {
     if (u.stopBleed && p.bleeding) { p.bleeding = false; this.ui.message('Bleeding stopped.'); }
     if (u.food) p.food = Math.max(0, Math.min(100, p.food + u.food));
     if (u.water) p.water = Math.max(0, Math.min(100, p.water + u.water));
+    if (u.regen) p.addSaturation(u.regen[0], u.regen[1]);
     const inv = this.inventory;
     const slot = slotIndex >= 0 ? inv.slots[slotIndex] : inv.slots[this.combat.slot];
     if (slot && slot.id === id) {
@@ -622,7 +623,7 @@ class Game {
     const data = {
       v: 1,
       clock: this.clock,
-      player: { pos: p.pos, yaw: p.yaw, pitch: p.pitch, health: p.health, food: p.food, water: p.water, stamina: p.stamina, bleeding: p.bleeding, infection: p.infection },
+      player: { pos: p.pos, yaw: p.yaw, pitch: p.pitch, health: p.health, food: p.food, water: p.water, stamina: p.stamina, bleeding: p.bleeding, infection: p.infection, saturation: p.saturation },
       inventory: this.inventory.serialize(),
       env: { hours: this.env.hours, day: this.env.day, hordeDay: this.zombies.hordeDay },
       stats: this.stats,
@@ -646,6 +647,7 @@ class Game {
     const p = this.player;
     p.reset();
     Object.assign(p, { yaw: data.player.yaw, pitch: data.player.pitch, health: data.player.health, food: data.player.food, water: data.player.water, stamina: data.player.stamina, bleeding: data.player.bleeding, infection: data.player.infection || 0 });
+    p.saturation = Array.isArray(data.player.saturation) ? data.player.saturation.filter((e) => e && e.rate > 0 && e.left > 0) : [];
     p.teleport(data.player.pos.x, data.player.pos.z, data.player.pos.y + 0.05);
     this.inventory.load(data.inventory);
     this.env.hours = data.env.hours;
